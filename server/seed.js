@@ -35,15 +35,15 @@ function seed() {
   ];
 
   const patients = [
-    { id: 1, name: 'Arjun Kapoor', phone: '987650111', email: 'arjun.k@example.com', age: 34, gender: 'Male', lastVisit: '2026-09-03', status: 'Active', notes: 'Prefers evening appointments.' },
-    { id: 2, name: 'Sneha Reddy', phone: '987650222', email: 'sneha.r@example.com', age: 28, gender: 'Female', lastVisit: '2026-08-20', status: 'Active', notes: 'Invisalign patient — tray 4.' },
-    { id: 3, name: 'Rahul Verma', phone: '987650333', email: 'rahul.v@example.com', age: 45, gender: 'Male', lastVisit: '2026-07-15', status: 'Active', notes: '' },
-    { id: 4, name: 'Priya Sharma', phone: '987650444', email: 'priya.s@example.com', age: 26, gender: 'Female', lastVisit: '2026-06-10', status: 'Active', notes: 'Interested in whitening.' },
-    { id: 5, name: 'Anjali Mehta', phone: '987650555', email: 'anjali.m@example.com', age: 31, gender: 'Female', lastVisit: '2026-08-28', status: 'Active', notes: 'Implant consultation pending.' },
-    { id: 6, name: 'Vikram Singh', phone: '987650666', email: 'vikram.s@example.com', age: 52, gender: 'Male', lastVisit: '2026-08-05', status: 'Active', notes: 'Implant — tooth 46.' },
-    { id: 7, name: 'Fatima Sheikh', phone: '987650777', email: 'fatima.s@example.com', age: 38, gender: 'Female', lastVisit: '2026-08-31', status: 'Active', notes: 'Extraction done 31 Aug.' },
-    { id: 8, name: 'Rahul Sharma', phone: '987650888', email: 'rahul.sh@example.com', age: 29, gender: 'Male', lastVisit: '2026-05-22', status: 'Active', notes: '' },
-    { id: 9, name: 'Deepak Nair', phone: '987650999', email: 'deepak.n@example.com', age: 41, gender: 'Male', lastVisit: '2026-04-18', status: 'Active', notes: '' },
+    { id: 1, name: 'Arjun Kapoor', phone: '9876500111', email: 'arjun.k@example.com', age: 34, gender: 'Male', lastVisit: '2026-09-03', status: 'Active', notes: 'Prefers evening appointments.' },
+    { id: 2, name: 'Sneha Reddy', phone: '9876500222', email: 'sneha.r@example.com', age: 28, gender: 'Female', lastVisit: '2026-08-20', status: 'Active', notes: 'Invisalign patient — tray 4.' },
+    { id: 3, name: 'Rahul Verma', phone: '9876500333', email: 'rahul.v@example.com', age: 45, gender: 'Male', lastVisit: '2026-07-15', status: 'Active', notes: '' },
+    { id: 4, name: 'Priya Sharma', phone: '9876500444', email: 'priya.s@example.com', age: 26, gender: 'Female', lastVisit: '2026-06-10', status: 'Active', notes: 'Interested in whitening.' },
+    { id: 5, name: 'Anjali Mehta', phone: '9876500555', email: 'anjali.m@example.com', age: 31, gender: 'Female', lastVisit: '2026-08-28', status: 'Active', notes: 'Implant consultation pending.' },
+    { id: 6, name: 'Vikram Singh', phone: '9876500666', email: 'vikram.s@example.com', age: 52, gender: 'Male', lastVisit: '2026-08-05', status: 'Active', notes: 'Implant — tooth 46.' },
+    { id: 7, name: 'Fatima Sheikh', phone: '9876500777', email: 'fatima.s@example.com', age: 38, gender: 'Female', lastVisit: '2026-08-31', status: 'Active', notes: 'Extraction done 31 Aug.' },
+    { id: 8, name: 'Rahul Sharma', phone: '9876500888', email: 'rahul.sh@example.com', age: 29, gender: 'Male', lastVisit: '2026-05-22', status: 'Active', notes: '' },
+    { id: 9, name: 'Deepak Nair', phone: '9876500999', email: 'deepak.n@example.com', age: 41, gender: 'Male', lastVisit: '2026-04-18', status: 'Active', notes: '' },
     { id: 10, name: 'Kavya Iyer', phone: '9876501010', email: 'kavya.i@example.com', age: 22, gender: 'Female', lastVisit: '2026-08-12', status: 'Active', notes: 'College student — prefers Sat slots.' }
   ];
 
@@ -80,8 +80,8 @@ function seed() {
   ];
 
   const leads = [
-    { id: 1, name: 'Anjali Mehta', source: 'referral', phone: '987650555', score: 85, status: 'Converted', notes: 'Wants implants consultation', created_date: '2026-08-25' },
-    { id: 2, name: 'Vikram Singh', source: 'google-ads', phone: '987650666', score: 75, status: 'Converted', notes: 'Implant enquiry from Google Ads', created_date: '2026-08-02' },
+    { id: 1, name: 'Anjali Mehta', source: 'referral', phone: '9876500555', score: 85, status: 'Converted', notes: 'Wants implants consultation', created_date: '2026-08-25' },
+    { id: 2, name: 'Vikram Singh', source: 'google-ads', phone: '9876500666', score: 75, status: 'Converted', notes: 'Implant enquiry from Google Ads', created_date: '2026-08-02' },
     { id: 3, name: 'Kavya Iyer', source: 'website', phone: '9876501010', score: 60, status: 'New', notes: 'Whitening enquiry via booking page', created_date: '2026-09-01' },
     { id: 4, name: 'Rohit Malhotra', source: 'instagram', phone: '9811002233', score: 55, status: 'New', notes: 'Braces cost enquiry (DM)', created_date: '2026-09-01' },
     { id: 5, name: 'Sana Khan', source: 'walk-in', phone: '9900445566', score: 40, status: 'Contacted', notes: 'Walk-in enquiry, needs follow-up call', created_date: '2026-08-29' },
@@ -89,11 +89,11 @@ function seed() {
   ];
 
   const reviews = [
-    { id: 1, name: 'Arjun Kapoor', phone: '987650111', rating: 5, text: 'Excellent service! Dr. Ananya Rao was very gentle and professional.', source: 'In-Clinic', status: 'published', date: '2026-08-31', response: '' },
-    { id: 2, name: 'Sneha Reddy', phone: '987650222', rating: 5, text: 'The Invisalign treatment is going great. Very happy with results so far!', source: 'Google', status: 'published', date: '2026-08-31', response: '' },
-    { id: 3, name: 'Rahul Verma', phone: '987650333', rating: 4, text: 'Good experience overall, slight wait time but worth it.', source: 'Whatsapp', status: 'published', date: '2026-08-31', response: 'Thank you Rahul! We are working on reducing wait times.' },
+    { id: 1, name: 'Arjun Kapoor', phone: '9876500111', rating: 5, text: 'Excellent service! Dr. Ananya Rao was very gentle and professional.', source: 'In-Clinic', status: 'published', date: '2026-08-31', response: '' },
+    { id: 2, name: 'Sneha Reddy', phone: '9876500222', rating: 5, text: 'The Invisalign treatment is going great. Very happy with results so far!', source: 'Google', status: 'published', date: '2026-08-31', response: '' },
+    { id: 3, name: 'Rahul Verma', phone: '9876500333', rating: 4, text: 'Good experience overall, slight wait time but worth it.', source: 'Whatsapp', status: 'published', date: '2026-08-31', response: 'Thank you Rahul! We are working on reducing wait times.' },
     { id: 4, name: 'Test Patient Review', phone: '', rating: 5, text: 'Great dental service, very professional!', source: 'Website', status: 'pending', date: '2026-09-03', response: '' },
-    { id: 5, name: 'Fatima Sheikh', phone: '987650777', rating: 5, text: 'Painless extraction! Highly recommend.', source: 'Followup-Sms', status: 'pending', date: '2026-08-31', response: '' }
+    { id: 5, name: 'Fatima Sheikh', phone: '9876500777', rating: 5, text: 'Painless extraction! Highly recommend.', source: 'Followup-Sms', status: 'pending', date: '2026-08-31', response: '' }
   ];
 
   const tasks = [
@@ -154,7 +154,7 @@ function seed() {
 
   const whatsappChats = [
     {
-      id: 1, patientName: 'Anjali Mehta', phone: '987650555', unread: 1,
+      id: 1, patientName: 'Anjali Mehta', phone: '9876500555', unread: 1,
       messages: [
         { from: 'patient', text: 'Hi, I wanted to ask about implant costs', time: '2026-09-02 14:20' },
         { from: 'clinic', text: 'Hello Anjali! Implants start at ₹45,000 including the crown. Shall I book a consultation with Dr. Meera?', time: '2026-09-02 14:35' },

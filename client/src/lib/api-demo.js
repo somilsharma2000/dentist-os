@@ -2,7 +2,7 @@
 // static deployment, where there is no backend). Data persists in localStorage.
 import dbSeed from './demoData.json';
 
-const LS_KEY = 'dentos-demo-db-v1';
+const LS_KEY = 'dentos-demo-db-v2';
 
 function clone(o) {
   return JSON.parse(JSON.stringify(o));
