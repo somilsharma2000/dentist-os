@@ -6,6 +6,17 @@ A complete, self-hostable dental practice management platform — public clinic 
 
 **No proprietary platform needed** — plain React + Express, runs anywhere Node runs.
 
+## Documentation
+
+Full project docs live in [`docs/`](docs/):
+
+- [`docs/PRD.md`](docs/PRD.md) — product requirements: what we're building and for whom
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — actors, flows, data model, folder structure, tech stack
+- [`docs/RULES.md`](docs/RULES.md) — coding rules: do/avoid, libraries, error handling, AI boundaries
+- [`docs/PHASES.md`](docs/PHASES.md) — phased roadmap with current status
+
+Read RULES.md before contributing — it binds all future work on this repo.
+
 ## Quick start
 
 ```bash
