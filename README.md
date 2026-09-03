@@ -1,6 +1,8 @@
 # Dentist OS
 
 A complete, self-hostable dental practice management platform — public clinic website + 20-module admin OS (DentOS). Faithful rebuild of the SmileCraft Dental Clinic app.
+**Live demo:** https://somilsharma2000.github.io/dentist-os/ — fully working in-browser demo (data persists in your browser localStorage; admin at `/#/admin`)
+
 
 **No proprietary platform needed** — plain React + Express, runs anywhere Node runs.
 
