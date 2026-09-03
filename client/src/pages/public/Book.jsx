@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
-import { formatDate, formatINR, todayISO } from '../../lib/utils';
+import { formatDate, formatINR, todayISO, next7Days } from '../../lib/utils';
 import { Button, Card, Avatar, Input, Textarea, Badge } from '../../components/ui';
 import { CheckCircle2, Calendar, Clock, User, UserCheck, Stethoscope, ChevronRight, ChevronLeft } from 'lucide-react';
 
@@ -372,7 +372,34 @@ export default function Book() {
           <div className="space-y-4 max-w-md mx-auto py-2">
             <h2 className="text-lg font-bold text-center">Step 3: Select Date</h2>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Appointment Date *</label>
+              <label className="text-sm font-medium">Quick Pick</label>
+              <div className="grid grid-cols-4 gap-2">
+                {next7Days().map((d) => {
+                  const isSelected = selectedDate === d.iso;
+                  return (
+                    <button
+                      key={d.iso}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDate(d.iso);
+                        setSelectedTime('');
+                        setStepError('');
+                      }}
+                      className={`rounded-lg border px-2 py-2 text-center transition-all hover:border-primary/50 ${
+                        isSelected ? 'ring-2 ring-primary border-primary bg-primary/5' : 'bg-card'
+                      }`}
+                    >
+                      <span className="block text-[11px] font-medium text-muted-foreground">
+                        {d.dayName}
+                      </span>
+                      <span className="block text-sm font-bold">{d.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Or pick from the calendar</label>
               <Input
                 type="date"
                 min={todayISO()}
