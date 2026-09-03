@@ -36,10 +36,12 @@ Tasks, Inventory, Automations (rule engine UI), AI Assistant, WhatsApp inbox UI,
 - ✅ Slot engine verified (9:00–17:45, lunch gap, no double-booking)
 - ✅ IST times everywhere (15:30 stays 15:30 — original app's 21:30 bug fixed)
 - ✅ ₹ on money fields only
-- 🔶 Complete a full booking → confirm screen end-to-end
-- 🔶 Review submit → moderation queue → publish round-trip in browser
-- 🔶 Fix seed patient phones: 11-digit → 10-digit (match form validation), update README portal login
-- ⬜ Admin module spot-checks: Tooth Chart clicks, QR generation, AI Assistant, Settings save
+- ✅ Full booking → confirm screen end-to-end (Test Patient, 5 Sept 09:00 → synced to admin Appointments)
+- ✅ Review submit → moderation queue → publish → public round-trip (4.8★/4 consistent)
+- ✅ Seed patient phones fixed to true 10-digit (9876500111–0999; earlier sed had over-stripped to 9 digits); demo LS key bumped to v2 for auto re-seed
+- ✅ Portal login live-tested (Arjun Kapoor, 9876500111 → dashboard with appts 15:30 IST, plans, invoices)
+- ✅ Admin spot-checks: Tooth Chart (16 → Root Canal, color persists), AI Assistant (Today's schedule reply, IST), Settings (all sections render)
+- ⬜ QR generation spot-check
 - ⬜ Real-device test of booking wizard (native date picker)
 
 ## Phase 9 — Production deployment ⬜
