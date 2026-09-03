@@ -1,0 +1,33 @@
+{
+  "name": "dentist-os",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dentist OS — full-stack dental clinic management platform",
+  "scripts": {
+    "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "node server/index.js",
+    "dev:client": "vite",
+    "build": "vite build",
+    "start": "cross-env NODE_ENV=production node server/index.js"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "cross-env": "^7.0.3",
+    "express": "^4.22.2",
+    "jsdom": "^29.1.1",
+    "lucide-react": "^0.441.0",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.6",
+    "recharts": "^2.15.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.5.4",
+    "concurrently": "^8.2.2",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^3.4.19",
+    "vite": "^5.4.21"
+  }
+}
