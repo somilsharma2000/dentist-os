@@ -1,0 +1,1002 @@
+{
+ "settings": {
+  "clinicName": "SmileCraft Dental Clinic",
+  "tagline": "Gentle care, confident smiles",
+  "heroTitle": "Your Smile, Our Priority",
+  "heroSubtitle": "Complete dental care for the whole family in the heart of Bengaluru.",
+  "address": "12 MG Road, Bengaluru, Karnataka 560001",
+  "phone": "+91 98765 43210",
+  "email": "contact@smilecraftdental.com",
+  "hours": "09:00 - 18:00",
+  "daysOpen": "Mon – Sat",
+  "services": [
+   {
+    "name": "Cleanings & Polishing",
+    "price": 800,
+    "desc": "Routine scaling and polishing for healthy gums."
+   },
+   {
+    "name": "Fillings",
+    "price": 1200,
+    "desc": "Tooth-colored composite fillings for cavities."
+   },
+   {
+    "name": "Root Canal Treatment",
+    "price": 4500,
+    "desc": "Painless single-visit root canals."
+   },
+   {
+    "name": "Braces",
+    "price": 35000,
+    "desc": "Metal and ceramic orthodontic braces."
+   },
+   {
+    "name": "Invisalign",
+    "price": 80000,
+    "desc": "Clear aligner therapy for a discreet straight smile."
+   },
+   {
+    "name": "Teeth Whitening",
+    "price": 12000,
+    "desc": "In-clinic laser whitening, up to 6 shades brighter."
+   },
+   {
+    "name": "Dental Implants",
+    "price": 45000,
+    "desc": "Permanent tooth replacement with titanium implants."
+   },
+   {
+    "name": "Wisdom Tooth Extraction",
+    "price": 3500,
+    "desc": "Safe surgical extractions under local anaesthesia."
+   },
+   {
+    "name": "Kids' Dentistry",
+    "price": 600,
+    "desc": "Friendly, gentle dental care designed for children."
+   }
+  ],
+  "goals": {
+   "revenue": 500000,
+   "newPatients": 25,
+   "treatments": 60,
+   "reviews": 15
+  },
+  "monthly": {
+   "revenue": 0,
+   "newPatients": 18,
+   "treatments": 42,
+   "reviews": 6
+  }
+ },
+ "dentists": [
+  {
+   "id": 1,
+   "name": "Dr. Ananya Rao",
+   "specialty": "General Dentistry",
+   "rating": 4.9,
+   "days": "Mon – Sat",
+   "bio": "10+ years of experience in family and cosmetic dentistry. Known for her gentle, painless approach.",
+   "image": null
+  },
+  {
+   "id": 2,
+   "name": "Dr. Vikram Shah",
+   "specialty": "Orthodontics",
+   "rating": 4.8,
+   "days": "Mon, Wed, Fri",
+   "bio": "Invisalign-certified orthodontist specializing in braces and clear aligners for all ages.",
+   "image": null
+  },
+  {
+   "id": 3,
+   "name": "Dr. Meera Nair",
+   "specialty": "Oral & Maxillofacial Surgery",
+   "rating": 4.7,
+   "days": "Tue, Thu, Sat",
+   "bio": "Expert in implants, wisdom tooth extractions and corrective jaw surgery.",
+   "image": null
+  },
+  {
+   "id": 4,
+   "name": "Dr. Rohit Menon",
+   "specialty": "Pediatric Dentistry",
+   "rating": 4.8,
+   "days": "Mon – Sat",
+   "bio": "Makes dental visits fun for kids — from first checkups to cavity care.",
+   "image": null
+  }
+ ],
+ "patients": [
+  {
+   "id": 1,
+   "name": "Arjun Kapoor",
+   "phone": "98765000111",
+   "email": "arjun.k@example.com",
+   "age": 34,
+   "gender": "Male",
+   "lastVisit": "2026-09-03",
+   "status": "Active",
+   "notes": "Prefers evening appointments."
+  },
+  {
+   "id": 2,
+   "name": "Sneha Reddy",
+   "phone": "98765000222",
+   "email": "sneha.r@example.com",
+   "age": 28,
+   "gender": "Female",
+   "lastVisit": "2026-08-20",
+   "status": "Active",
+   "notes": "Invisalign patient — tray 4."
+  },
+  {
+   "id": 3,
+   "name": "Rahul Verma",
+   "phone": "98765000333",
+   "email": "rahul.v@example.com",
+   "age": 45,
+   "gender": "Male",
+   "lastVisit": "2026-07-15",
+   "status": "Active",
+   "notes": ""
+  },
+  {
+   "id": 4,
+   "name": "Priya Sharma",
+   "phone": "98765000444",
+   "email": "priya.s@example.com",
+   "age": 26,
+   "gender": "Female",
+   "lastVisit": "2026-06-10",
+   "status": "Active",
+   "notes": "Interested in whitening."
+  },
+  {
+   "id": 5,
+   "name": "Anjali Mehta",
+   "phone": "98765000555",
+   "email": "anjali.m@example.com",
+   "age": 31,
+   "gender": "Female",
+   "lastVisit": "2026-08-28",
+   "status": "Active",
+   "notes": "Implant consultation pending."
+  },
+  {
+   "id": 6,
+   "name": "Vikram Singh",
+   "phone": "98765000666",
+   "email": "vikram.s@example.com",
+   "age": 52,
+   "gender": "Male",
+   "lastVisit": "2026-08-05",
+   "status": "Active",
+   "notes": "Implant — tooth 46."
+  },
+  {
+   "id": 7,
+   "name": "Fatima Sheikh",
+   "phone": "98765000777",
+   "email": "fatima.s@example.com",
+   "age": 38,
+   "gender": "Female",
+   "lastVisit": "2026-08-31",
+   "status": "Active",
+   "notes": "Extraction done 31 Aug."
+  },
+  {
+   "id": 8,
+   "name": "Rahul Sharma",
+   "phone": "98765000888",
+   "email": "rahul.sh@example.com",
+   "age": 29,
+   "gender": "Male",
+   "lastVisit": "2026-05-22",
+   "status": "Active",
+   "notes": ""
+  },
+  {
+   "id": 9,
+   "name": "Deepak Nair",
+   "phone": "98765000999",
+   "email": "deepak.n@example.com",
+   "age": 41,
+   "gender": "Male",
+   "lastVisit": "2026-04-18",
+   "status": "Active",
+   "notes": ""
+  },
+  {
+   "id": 10,
+   "name": "Kavya Iyer",
+   "phone": "98765001010",
+   "email": "kavya.i@example.com",
+   "age": 22,
+   "gender": "Female",
+   "lastVisit": "2026-08-12",
+   "status": "Active",
+   "notes": "College student — prefers Sat slots."
+  }
+ ],
+ "appointments": [
+  {
+   "id": 1,
+   "patientId": 1,
+   "dentistId": 1,
+   "date": "2026-09-03",
+   "time": "15:30",
+   "type": "checkup",
+   "procedure": "Follow-up checkup",
+   "fee": 500,
+   "status": "Confirmed"
+  },
+  {
+   "id": 2,
+   "patientId": 2,
+   "dentistId": 2,
+   "date": "2026-09-03",
+   "time": "17:30",
+   "type": "orthodontic",
+   "procedure": "Invisalign check - tray 4",
+   "fee": 1500,
+   "status": "Confirmed"
+  },
+  {
+   "id": 3,
+   "patientId": 4,
+   "dentistId": 1,
+   "date": "2026-09-04",
+   "time": "10:00",
+   "type": "checkup",
+   "procedure": "Teeth whitening consultation",
+   "fee": 0,
+   "status": "Scheduled"
+  },
+  {
+   "id": 4,
+   "patientId": 6,
+   "dentistId": 3,
+   "date": "2026-09-05",
+   "time": "11:30",
+   "type": "surgery",
+   "procedure": "Implant placement - tooth 46",
+   "fee": 45000,
+   "status": "Scheduled"
+  },
+  {
+   "id": 5,
+   "patientId": 3,
+   "dentistId": 1,
+   "date": "2026-09-08",
+   "time": "16:00",
+   "type": "checkup",
+   "procedure": "6-month cleaning",
+   "fee": 800,
+   "status": "Scheduled"
+  },
+  {
+   "id": 6,
+   "patientId": 5,
+   "dentistId": 3,
+   "date": "2026-09-10",
+   "time": "14:00",
+   "type": "checkup",
+   "procedure": "Implant follow-up X-ray",
+   "fee": 500,
+   "status": "Scheduled"
+  }
+ ],
+ "treatmentPlans": [
+  {
+   "id": 1,
+   "patientId": 1,
+   "title": "Multiple caries requiring fillings",
+   "cost": 6000,
+   "status": "In Progress",
+   "teeth": [
+    14,
+    15,
+    26
+   ],
+   "notes": "Composite fillings on upper molars, 2 sittings."
+  },
+  {
+   "id": 2,
+   "patientId": 2,
+   "title": "Orthodontic treatment - Invisalign",
+   "cost": 80000,
+   "status": "Proposed",
+   "teeth": [],
+   "notes": "14-month plan, tray changes every 2 weeks."
+  },
+  {
+   "id": 3,
+   "patientId": 4,
+   "title": "Teeth Whitening",
+   "cost": 12000,
+   "status": "Proposed",
+   "teeth": [],
+   "notes": "Laser whitening, 2 sessions."
+  },
+  {
+   "id": 4,
+   "patientId": 6,
+   "title": "Dental Implants - tooth 46",
+   "cost": 45000,
+   "status": "Proposed",
+   "teeth": [
+    46
+   ],
+   "notes": "Single implant with crown."
+  },
+  {
+   "id": 5,
+   "patientId": 3,
+   "title": "Scaling and polishing",
+   "cost": 1500,
+   "status": "Completed",
+   "teeth": [],
+   "notes": ""
+  }
+ ],
+ "invoices": [
+  {
+   "id": 1,
+   "number": "INV-2026-001",
+   "patientId": 1,
+   "date": "2026-09-01",
+   "items": "Fillings (2) + consultation",
+   "amount": 2940,
+   "status": "Pending"
+  },
+  {
+   "id": 2,
+   "number": "INV-2026-002",
+   "patientId": 2,
+   "date": "2026-09-02",
+   "items": "Invisalign installment 4",
+   "amount": 6000,
+   "status": "Pending"
+  },
+  {
+   "id": 3,
+   "number": "INV-2026-003",
+   "patientId": 3,
+   "date": "2026-07-15",
+   "items": "Cleaning + consultation",
+   "amount": 800,
+   "status": "Paid"
+  },
+  {
+   "id": 4,
+   "number": "INV-2026-004",
+   "patientId": 5,
+   "date": "2026-08-28",
+   "items": "Scaling and polishing",
+   "amount": 1500,
+   "status": "Paid"
+  },
+  {
+   "id": 5,
+   "number": "INV-2026-005",
+   "patientId": 7,
+   "date": "2026-08-31",
+   "items": "Wisdom tooth extraction",
+   "amount": 2500,
+   "status": "Paid"
+  },
+  {
+   "id": 6,
+   "number": "INV-2026-006",
+   "patientId": 9,
+   "date": "2026-04-18",
+   "items": "Consultation + X-ray",
+   "amount": 1200,
+   "status": "Paid"
+  },
+  {
+   "id": 7,
+   "number": "INV-2026-007",
+   "patientId": 4,
+   "date": "2026-06-10",
+   "items": "Consultation",
+   "amount": 500,
+   "status": "Paid"
+  },
+  {
+   "id": 8,
+   "number": "INV-2026-008",
+   "patientId": 2,
+   "date": "2026-08-20",
+   "items": "Invisalign installment 3",
+   "amount": 800,
+   "status": "Paid"
+  },
+  {
+   "id": 9,
+   "number": "INV-2026-009",
+   "patientId": 8,
+   "date": "2026-05-22",
+   "items": "Filling",
+   "amount": 700,
+   "status": "Paid"
+  },
+  {
+   "id": 10,
+   "number": "INV-2026-010",
+   "patientId": 10,
+   "date": "2026-08-12",
+   "items": "Cleaning",
+   "amount": 900,
+   "status": "Paid"
+  },
+  {
+   "id": 11,
+   "number": "INV-2026-011",
+   "patientId": 6,
+   "date": "2026-08-05",
+   "items": "Implant consultation + CBCT",
+   "amount": 1000,
+   "status": "Paid"
+  },
+  {
+   "id": 12,
+   "number": "INV-2026-012",
+   "patientId": 1,
+   "date": "2026-08-15",
+   "items": "Consultation",
+   "amount": 500,
+   "status": "Paid"
+  }
+ ],
+ "leads": [
+  {
+   "id": 1,
+   "name": "Anjali Mehta",
+   "source": "referral",
+   "phone": "98765000555",
+   "score": 85,
+   "status": "Converted",
+   "notes": "Wants implants consultation",
+   "created_date": "2026-08-25"
+  },
+  {
+   "id": 2,
+   "name": "Vikram Singh",
+   "source": "google-ads",
+   "phone": "98765000666",
+   "score": 75,
+   "status": "Converted",
+   "notes": "Implant enquiry from Google Ads",
+   "created_date": "2026-08-02"
+  },
+  {
+   "id": 3,
+   "name": "Kavya Iyer",
+   "source": "website",
+   "phone": "98765001010",
+   "score": 60,
+   "status": "New",
+   "notes": "Whitening enquiry via booking page",
+   "created_date": "2026-09-01"
+  },
+  {
+   "id": 4,
+   "name": "Rohit Malhotra",
+   "source": "instagram",
+   "phone": "98111002233",
+   "score": 55,
+   "status": "New",
+   "notes": "Braces cost enquiry (DM)",
+   "created_date": "2026-09-01"
+  },
+  {
+   "id": 5,
+   "name": "Sana Khan",
+   "source": "walk-in",
+   "phone": "9900445566",
+   "score": 40,
+   "status": "Contacted",
+   "notes": "Walk-in enquiry, needs follow-up call",
+   "created_date": "2026-08-29"
+  },
+  {
+   "id": 6,
+   "name": "Aakash Verma",
+   "source": "google-ads",
+   "phone": "9822334455",
+   "score": 65,
+   "status": "Lost",
+   "notes": "Chose another clinic (price)",
+   "created_date": "2026-08-10"
+  }
+ ],
+ "reviews": [
+  {
+   "id": 1,
+   "name": "Arjun Kapoor",
+   "phone": "98765000111",
+   "rating": 5,
+   "text": "Excellent service! Dr. Ananya Rao was very gentle and professional.",
+   "source": "In-Clinic",
+   "status": "published",
+   "date": "2026-08-31",
+   "response": ""
+  },
+  {
+   "id": 2,
+   "name": "Sneha Reddy",
+   "phone": "98765000222",
+   "rating": 5,
+   "text": "The Invisalign treatment is going great. Very happy with results so far!",
+   "source": "Google",
+   "status": "published",
+   "date": "2026-08-31",
+   "response": ""
+  },
+  {
+   "id": 3,
+   "name": "Rahul Verma",
+   "phone": "98765000333",
+   "rating": 4,
+   "text": "Good experience overall, slight wait time but worth it.",
+   "source": "Whatsapp",
+   "status": "published",
+   "date": "2026-08-31",
+   "response": "Thank you Rahul! We are working on reducing wait times."
+  },
+  {
+   "id": 4,
+   "name": "Test Patient Review",
+   "phone": "",
+   "rating": 5,
+   "text": "Great dental service, very professional!",
+   "source": "Website",
+   "status": "pending",
+   "date": "2026-09-03",
+   "response": ""
+  },
+  {
+   "id": 5,
+   "name": "Fatima Sheikh",
+   "phone": "98765000777",
+   "rating": 5,
+   "text": "Painless extraction! Highly recommend.",
+   "source": "Followup-Sms",
+   "status": "pending",
+   "date": "2026-08-31",
+   "response": ""
+  }
+ ],
+ "tasks": [
+  {
+   "id": 1,
+   "title": "Call back Priya Sharma about teeth whitening",
+   "assignee": "Reception",
+   "due": "2026-09-03",
+   "status": "pending"
+  },
+  {
+   "id": 2,
+   "title": "Follow up with Anjali Mehta about implants",
+   "assignee": "Dr. Ananya",
+   "due": "2026-09-03",
+   "status": "pending"
+  },
+  {
+   "id": 3,
+   "title": "Send appointment reminder to Vikram Singh",
+   "assignee": "Front Desk",
+   "due": "2026-09-04",
+   "status": "pending"
+  },
+  {
+   "id": 4,
+   "title": "Order composite resin kit",
+   "assignee": "Admin",
+   "due": "2026-08-30",
+   "status": "completed"
+  },
+  {
+   "id": 5,
+   "title": "Confirm Invisalign tray 5 delivery",
+   "assignee": "Front Desk",
+   "due": "2026-08-28",
+   "status": "completed"
+  }
+ ],
+ "inventory": [
+  {
+   "id": 1,
+   "item": "Orthodontic Wires (Pack)",
+   "category": "Orthodontics",
+   "quantity": 2,
+   "unit": "pack",
+   "minStock": 5,
+   "supplier": "Ortho Supplies India"
+  },
+  {
+   "id": 2,
+   "item": "Anesthetic Carpules (Box of 50)",
+   "category": "Consumables",
+   "quantity": 3,
+   "unit": "box",
+   "minStock": 5,
+   "supplier": "MedDent Distributors"
+  },
+  {
+   "id": 3,
+   "item": "Teeth Whitening Gel (Syringe)",
+   "category": "Cosmetic",
+   "quantity": 4,
+   "unit": "syringe",
+   "minStock": 6,
+   "supplier": "BrightSmile Co."
+  },
+  {
+   "id": 4,
+   "item": "Composite Resin Kit",
+   "category": "Restorative",
+   "quantity": 8,
+   "unit": "kit",
+   "minStock": 3,
+   "supplier": "MedDent Distributors"
+  },
+  {
+   "id": 5,
+   "item": "Disposable Gloves (Box)",
+   "category": "PPE",
+   "quantity": 40,
+   "unit": "box",
+   "minStock": 15,
+   "supplier": "SafeGuard Pvt Ltd"
+  },
+  {
+   "id": 6,
+   "item": "Face Masks (Box)",
+   "category": "PPE",
+   "quantity": 60,
+   "unit": "box",
+   "minStock": 20,
+   "supplier": "SafeGuard Pvt Ltd"
+  },
+  {
+   "id": 7,
+   "item": "Saliva Ejectors",
+   "category": "Consumables",
+   "quantity": 100,
+   "unit": "pcs",
+   "minStock": 50,
+   "supplier": "MedDent Distributors"
+  },
+  {
+   "id": 8,
+   "item": "Dental Burs (Assorted)",
+   "category": "Instruments",
+   "quantity": 15,
+   "unit": "pcs",
+   "minStock": 10,
+   "supplier": "Ortho Supplies India"
+  },
+  {
+   "id": 9,
+   "item": "X-ray Films",
+   "category": "Diagnostics",
+   "quantity": 25,
+   "unit": "pcs",
+   "minStock": 20,
+   "supplier": "RadImage Systems"
+  },
+  {
+   "id": 10,
+   "item": "Impression Material",
+   "category": "Restorative",
+   "quantity": 10,
+   "unit": "tub",
+   "minStock": 5,
+   "supplier": "MedDent Distributors"
+  },
+  {
+   "id": 11,
+   "item": "Suture Kits",
+   "category": "Surgical",
+   "quantity": 6,
+   "unit": "kit",
+   "minStock": 8,
+   "supplier": "SurgiCare India"
+  },
+  {
+   "id": 12,
+   "item": "Scaling Tips",
+   "category": "Instruments",
+   "quantity": 4,
+   "unit": "pcs",
+   "minStock": 3,
+   "supplier": "Ortho Supplies India"
+  }
+ ],
+ "automations": [
+  {
+   "id": 1,
+   "name": "Appointment Reminder (SMS)",
+   "trigger": "24 hours before appointment",
+   "action": "Send SMS reminder",
+   "active": true,
+   "executions": 1240,
+   "lastRun": "2026-09-02 18:00"
+  },
+  {
+   "id": 2,
+   "name": "Recall Nudge (6-month cleaning)",
+   "trigger": "6 months since last visit",
+   "action": "Send WhatsApp recall message",
+   "active": true,
+   "executions": 890,
+   "lastRun": "2026-09-01 09:00"
+  },
+  {
+   "id": 3,
+   "name": "Birthday Wishes",
+   "trigger": "Patient birthday",
+   "action": "Send WhatsApp birthday wish + discount coupon",
+   "active": true,
+   "executions": 210,
+   "lastRun": "2026-09-02 00:05"
+  },
+  {
+   "id": 4,
+   "name": "New Lead Welcome",
+   "trigger": "New lead created",
+   "action": "Send WhatsApp welcome message",
+   "active": true,
+   "executions": 145,
+   "lastRun": "2026-09-01 15:20"
+  },
+  {
+   "id": 5,
+   "name": "Post-Treatment Follow-up",
+   "trigger": "48 hours after completed visit",
+   "action": "Send follow-up SMS",
+   "active": true,
+   "executions": 620,
+   "lastRun": "2026-09-02 11:00"
+  },
+  {
+   "id": 6,
+   "name": "Review Request",
+   "trigger": "After completed visit",
+   "action": "Send WhatsApp review request with link",
+   "active": true,
+   "executions": 480,
+   "lastRun": "2026-09-02 11:05"
+  },
+  {
+   "id": 7,
+   "name": "No-Show Recovery",
+   "trigger": "Patient marked No-Show",
+   "action": "Send rebooking SMS",
+   "active": true,
+   "executions": 85,
+   "lastRun": "2026-08-30 17:00"
+  },
+  {
+   "id": 8,
+   "name": "Payment Reminder",
+   "trigger": "Invoice overdue 3 days",
+   "action": "Send SMS payment reminder",
+   "active": false,
+   "executions": 40,
+   "lastRun": "2026-08-28 10:00"
+  },
+  {
+   "id": 9,
+   "name": "New Patient Onboarding",
+   "trigger": "New patient registered",
+   "action": "Send welcome pack (WhatsApp)",
+   "active": true,
+   "executions": 95,
+   "lastRun": "2026-09-01 16:00"
+  },
+  {
+   "id": 10,
+   "name": "Monthly Report to Owner",
+   "trigger": "1st of every month",
+   "action": "Email monthly summary report",
+   "active": true,
+   "executions": 8,
+   "lastRun": "2026-09-01 08:00"
+  }
+ ],
+ "recall": [
+  {
+   "id": 1,
+   "patientId": 4,
+   "type": "Whitening touch-up",
+   "dueDate": "2026-09-10",
+   "status": "Due",
+   "channel": "WhatsApp"
+  },
+  {
+   "id": 2,
+   "patientId": 3,
+   "type": "6-month cleaning",
+   "dueDate": "2026-09-15",
+   "status": "Due",
+   "channel": "WhatsApp"
+  },
+  {
+   "id": 3,
+   "patientId": 7,
+   "type": "Post-extraction checkup",
+   "dueDate": "2026-10-01",
+   "status": "Due",
+   "channel": "SMS"
+  },
+  {
+   "id": 4,
+   "patientId": 9,
+   "type": "Annual checkup",
+   "dueDate": "2026-04-20",
+   "status": "Sent",
+   "channel": "SMS"
+  }
+ ],
+ "socialPosts": [
+  {
+   "id": 1,
+   "platform": "Instagram",
+   "content": "Behind the scenes at SmileCraft — meet our sterilization-first operatory setup! #dentalsafety #bengaluru",
+   "scheduledDate": "2026-08-28",
+   "status": "published",
+   "likes": 132
+  },
+  {
+   "id": 2,
+   "platform": "Facebook",
+   "content": "Invisalign special this month — free consultation + scan. Book now!",
+   "scheduledDate": "2026-08-30",
+   "status": "published",
+   "likes": 87
+  },
+  {
+   "id": 3,
+   "platform": "WhatsApp",
+   "content": "Free consultation week at SmileCraft — Sep 7 to Sep 12. Reply to book.",
+   "scheduledDate": "2026-09-05",
+   "status": "scheduled",
+   "likes": 0
+  },
+  {
+   "id": 4,
+   "platform": "YouTube",
+   "content": "Video script: Root canal myths debunked by Dr. Ananya Rao",
+   "scheduledDate": "2026-09-15",
+   "status": "draft",
+   "likes": 0
+  }
+ ],
+ "clients": [
+  {
+   "id": 1,
+   "name": "SmileCraft Dental Clinic (MG Road)",
+   "plan": "Starter",
+   "mrr": 25000,
+   "status": "Active",
+   "since": "2026-04-01",
+   "renewal": "2026-10-01"
+  },
+  {
+   "id": 2,
+   "name": "CityDent (HSR Layout)",
+   "plan": "Growth",
+   "mrr": 30000,
+   "status": "Active",
+   "since": "2026-05-15",
+   "renewal": "2026-11-15"
+  },
+  {
+   "id": 3,
+   "name": "WhiteField Family Dental",
+   "plan": "Starter",
+   "mrr": 20000,
+   "status": "Trial",
+   "since": "2026-08-20",
+   "renewal": "2026-09-20"
+  }
+ ],
+ "whatsappChats": [
+  {
+   "id": 1,
+   "patientName": "Anjali Mehta",
+   "phone": "98765000555",
+   "unread": 1,
+   "messages": [
+    {
+     "from": "patient",
+     "text": "Hi, I wanted to ask about implant costs",
+     "time": "2026-09-02 14:20"
+    },
+    {
+     "from": "clinic",
+     "text": "Hello Anjali! Implants start at ₹45,000 including the crown. Shall I book a consultation with Dr. Meera?",
+     "time": "2026-09-02 14:35"
+    },
+    {
+     "from": "patient",
+     "text": "Yes please, next week sometime",
+     "time": "2026-09-02 16:02"
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "patientName": "Rohit Malhotra",
+   "phone": "98111002233",
+   "unread": 2,
+   "messages": [
+    {
+     "from": "patient",
+     "text": "How much do braces cost?",
+     "time": "2026-09-01 11:10"
+    },
+    {
+     "from": "patient",
+     "text": "Also do you have EMI options?",
+     "time": "2026-09-01 11:11"
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "patientName": "Kavya Iyer",
+   "phone": "98765001010",
+   "unread": 0,
+   "messages": [
+    {
+     "from": "patient",
+     "text": "Got my cleaning done, thanks! 😁",
+     "time": "2026-08-12 13:00"
+    },
+    {
+     "from": "clinic",
+     "text": "Glad you loved it, Kavya! See you in 6 months.",
+     "time": "2026-08-12 13:15"
+    }
+   ]
+  }
+ ],
+ "qrCodes": [
+  {
+   "id": 1,
+   "name": "Online Booking",
+   "url": "/book",
+   "created_date": "2026-08-20"
+  },
+  {
+   "id": 2,
+   "name": "Leave a Review",
+   "url": "/reviews",
+   "created_date": "2026-08-22"
+  }
+ ],
+ "toothChartStates": [
+  {
+   "tooth": 14,
+   "state": "filled"
+  },
+  {
+   "tooth": 15,
+   "state": "filled"
+  },
+  {
+   "tooth": 26,
+   "state": "filled"
+  },
+  {
+   "tooth": 46,
+   "state": "implant"
+  }
+ ],
+ "nextId": 1000
+}

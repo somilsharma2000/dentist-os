@@ -1,4 +1,7 @@
+import { apiDemo } from './api-demo';
+
 const BASE = '/api';
+const DEMO = import.meta.env.VITE_DEMO === '1';
 
 async function handle(res) {
   if (!res.ok) {
@@ -10,7 +13,7 @@ async function handle(res) {
   return res.json();
 }
 
-export const api = {
+const apiServer = {
   get: (path) => fetch(BASE + path).then(handle),
   post: (path, body) =>
     fetch(BASE + path, {
@@ -26,3 +29,5 @@ export const api = {
     }).then(handle),
   del: (path) => fetch(BASE + path, { method: 'DELETE' }).then(handle)
 };
+
+export const api = DEMO ? apiDemo : apiServer;
