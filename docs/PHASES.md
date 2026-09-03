@@ -41,7 +41,7 @@ Tasks, Inventory, Automations (rule engine UI), AI Assistant, WhatsApp inbox UI,
 - ✅ Seed patient phones fixed to true 10-digit (9876500111–0999; earlier sed had over-stripped to 9 digits); demo LS key bumped to v2 for auto re-seed
 - ✅ Portal login live-tested (Arjun Kapoor, 9876500111 → dashboard with appts 15:30 IST, plans, invoices)
 - ✅ Admin spot-checks: Tooth Chart (16 → Root Canal, color persists), AI Assistant (Today's schedule reply, IST), Settings (all sections render)
-- ⬜ QR generation spot-check
+- ✅ QR generation spot-check (New QR → label + URL → Generate → scannable image renders, persists)
 - ⬜ Real-device test of booking wizard (native date picker)
 
 ## Phase 9 — Production deployment ⬜
