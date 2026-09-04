@@ -116,3 +116,16 @@ All mutations validate input server-side and return `{ error }` with proper stat
 main push → build:demo → dist/ → force-push to gh-pages branch
 ```
 Server deployment target: Render/Railway with `start` script; JSON DB on persistent disk (or managed Postgres in Phase 10).
+
+
+## Multi-tenancy (Phase 11, v1)
+
+**Model:** every tenant-owned record carries `tenantId`. Tables: `tenants` (clinic profile: name, plan, mrr, brandColor, status), `staff` (login + role). Staff roles: `super` (agency owner — sees all clinics, tenant switcher), `admin`, `dentist`, `front` (receptionist).
+
+**Auth:** `/auth/login` (email+password). Demo mode: session in localStorage (`dentos-session-v1`). Server mode: bearer token (in-memory session map; swap for JWT in hardening). All `/admin/*` routes redirect to `/#/admin-login` without a session.
+
+**Scoping:** every admin API read/write is filtered to the active tenant — super sees all, super can switch (`viewTenantId`), staff are pinned to their clinic; cross-tenant mutations return 403. Public routes (site, booking wizard, portal, published reviews, slots, settings) always serve tenant 1 — the clinic that owns the public website.
+
+**White-label:** `tenant.brandColor` is an HSL triple applied to the shadcn `--primary` token on admin login and tenant switch.
+
+**Unauthenticated reads:** only `dentists`, `reviews` (published only) and `settings` are public; everything else returns 401.

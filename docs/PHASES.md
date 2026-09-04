@@ -56,13 +56,17 @@ Tasks, Inventory, Automations (rule engine UI), AI Assistant, WhatsApp inbox UI,
 - Payment gateway (invoice payment links — Razorpay)
 - Email service (review requests, no-show follow-ups)
 
-## Phase 11 — Multi-tenant SaaS ⬜
-- Real auth: clinic staff login + roles (admin/receptionist/dentist)
-- Per-clinic data isolation (tenant_id on every record)
-- Agency dashboard: onboard client, per-client billing, MRR reporting
-- White-label theming per client (brand color, logo, name)
-- Postgres migration for production DB
+## Phase 11 — Multi-tenant SaaS 🔶 v1 SHIPPED (4 Sep 2026)
+- ✅ Staff auth: login page (/admin-login) with 6 demo accounts; admin routes guarded (redirect to login without session)
+- ✅ Roles: super (agency owner) / admin (clinic admin) / dentist / receptionist — role-filtered sidebar nav
+- ✅ Per-clinic isolation: tenantId on every record; API scopes all reads/writes to the staff member's clinic; cross-tenant write/delete blocked (403)
+- ✅ White-label theming: per-tenant brandColor (HSL) drives --primary across the admin UI (SmileCraft teal, CityDent purple, WhiteField amber) — live-verified
+- ✅ Agency owner: sees all clinics aggregated + tenant switcher (All clinics / per-clinic) + Agency Mgmt module
+- ✅ Server parity: server/api.js mirrors the demo shim (token sessions, same scoping); seed unified via demoData.json
+- ✅ Live-verified: login redirect, role nav, isolation (CityDent sees only its patient), theme colors, tenant switcher, aggregated dashboard
+- ⬜ Hardening: password hashing + JWT, per-tenant settings (dashboard goals still global), staff CRUD UI in admin
+- ⬜ Postgres migration for production DB (Phase 9+ prerequisite for scale)
 
 ---
 
-**Next action:** finish Phase 8 punch-list, then Phase 9.
+**Next action:** Phase 9 production deploy (Render/Railway) with the multi-tenant server; then Phase 10 integrations.

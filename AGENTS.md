@@ -15,8 +15,9 @@ Read this first if you are an AI agent (or human) picking up this project. It co
 2. **AI boundaries (from `docs/RULES.md`):** no autonomous publishing of reviews, no pricing changes, no unscheduled deployments — all require explicit owner approval.
 3. **Timezone: IST everywhere.** Dates and times must display in Asia/Calcutta, within clinic hours 09:00–18:00. (A past bug displayed 21:30/23:30 due to UTC conversion — don't regress it.)
 4. **Money:** ₹ prefix on money fields only. Counts (patients, treatments, reviews) are plain numbers, never ₹.
-5. **Phone numbers are 10-digit Indian mobiles** (e.g. `9876500111`). Seed data was once 11-digit, then accidentally over-stripped to 9-digit — both are bugs; keep everything exactly 10 digits.
-6. **Headless testing quirk:** raw CDP/browser fill commands do **not** fire React `onChange`, so a failed headless form submission is usually a *testing artifact, not an app bug*. Use typed keystroke actions (e.g. browser automation "type" actions) or a real browser/device to verify forms.
+5. **Multi-tenant (Phase 11 v1):** every record carries `tenantId`; never write cross-tenant (403). Roles: `super`/`admin`/`dentist`/`front` — respect the role nav filter in AdminLayout. Public routes always serve tenant 1.
+6. **Phone numbers are 10-digit Indian mobiles** (e.g. `9876500111`). Seed data was once 11-digit, then accidentally over-stripped to 9-digit — both are bugs; keep everything exactly 10 digits.
+7. **Headless testing quirk:** raw CDP/browser fill commands do **not** fire React `onChange`, so a failed headless form submission is usually a *testing artifact, not an app bug*. Use typed keystroke actions (e.g. browser automation "type" actions) or a real browser/device to verify forms.
 
 ## Tech stack
 
@@ -24,7 +25,7 @@ Read this first if you are an AI agent (or human) picking up this project. It co
 |---|---|
 | Frontend | React 18, Vite, Tailwind CSS, recharts, qrcode, react-router (HashRouter) |
 | Backend | Express, JSON-file DB (`server/data/`), seeded from `server/seed.js` |
-| Demo mode | `client/src/lib/api-demo.js` — in-browser API shim mirroring `server/api.js`; data seeded from `client/src/lib/demoData.json`, persisted in localStorage key `dentos-demo-db-v2` |
+| Demo mode | `client/src/lib/api-demo.js` — in-browser API shim mirroring `server/api.js`; data seeded from `client/src/lib/demoData.json`, persisted in localStorage key `dentos-demo-db-v3`; the staff session lives in `dentos-session-v1` |
 
 Two build modes:
 - **Server mode:** `npm run build` + `npm start` → real Express API on :4000, site on :3000. Use for Render/Railway.
@@ -48,10 +49,11 @@ npm run build:demo    # static demo build → dist/
 | Role | Credential |
 |---|---|
 | Patient portal | Phone `9876500111` (Arjun Kapoor), `9876500222` (Sneha Iyer) … `9876500999`; Kavya Menon: `9876501010`; Rohit Verma: `9811002233` |
-| Admin | No auth — open at `/#/admin` (auth arrives in Phase 11) |
+| Admin staff | Email/password at `/#/admin-login` — e.g. `agency@dentos.app`/`agency123` (super), `admin@smilecraft.com`/`admin123`, `front@smilecraft.com`/`front123`, `dr.rao@smilecraft.com`/`dentist123`, `admin@citydent.com`/`admin123`, `admin@whitefield.com`/`admin123`. Full list on the login page. |
 
 ## Project status (as of 4 Sep 2026 — keep `docs/PHASES.md` as the source of truth)
 
+- Phase 11 v1 (multi-tenant SaaS) shipped: staff login, roles, isolation, white-label, tenant switcher — see `docs/PHASES.md`.
 - Phases 1–7 complete: public site, 6-step booking wizard, patient portal, all admin modules (Dashboard, Patients, Appointments, Dentists, Treatment Plans, Tooth Chart, Invoices, Lead CRM, Social, Reviews, Recall, Tasks, Inventory, Automations, AI Assistant, WhatsApp inbox UI, QR Codes, Settings, Agency Mgmt, Website Mgr).
 - Phase 8 (QA) nearly done. **Verified live in a real browser:** booking wizard end-to-end incl. confirmation screen, review submit → moderation → publish round-trip, portal login (Arjun), Tooth Chart click/save/color persist, AI Assistant (correct IST replies), Settings rendering, IST everywhere, ₹ on money only.
 - **Remaining:** QR generation spot-check; real-device booking test (native date picker); Phase 9 production deploy (Render/Railway); Phase 10 real integrations (WhatsApp Cloud API, SMS gateway, Razorpay, email); Phase 11 multi-tenant auth + Postgres.

@@ -35,7 +35,7 @@ export default function Agency() {
   const fetchClients = async () => {
     try {
       setLoading(true);
-      const data = await api.get('/clients');
+      const data = await api.get('/tenants');
       setClients(data || []);
     } catch (err) {
       console.error('Error fetching clients:', err);
@@ -59,7 +59,7 @@ export default function Agency() {
     if (!formData.name.trim()) return;
     try {
       setSubmitting(true);
-      await api.post('/clients', {
+      await api.post('/tenants', {
         ...formData,
         mrr: Number(formData.mrr) || 0
       });
@@ -83,7 +83,7 @@ export default function Agency() {
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this client clinic?')) return;
     try {
-      await api.del(`/clients/${id}`);
+      await api.del(`/tenants/${id}`);
       fetchClients();
     } catch (err) {
       console.error('Error deleting client:', err);

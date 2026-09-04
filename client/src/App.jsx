@@ -1,6 +1,9 @@
 import { Routes, Route } from 'react-router-dom';
 import PublicLayout from './components/PublicLayout.jsx';
 import AdminLayout from './components/AdminLayout.jsx';
+import AdminLogin from './pages/admin/AdminLogin.jsx';
+import { getSession } from './lib/auth';
+import { Navigate } from 'react-router-dom';
 import Home from './pages/public/Home.jsx';
 import Services from './pages/public/Services.jsx';
 import Team from './pages/public/Team.jsx';
@@ -29,9 +32,16 @@ import Settings from './pages/admin/Settings.jsx';
 import Agency from './pages/admin/Agency.jsx';
 import WebsiteMgr from './pages/admin/WebsiteMgr.jsx';
 
+function RequireStaff({ children }) {
+  const s = getSession();
+  if (!s || !s.staff) return <Navigate to="/admin-login" replace />;
+  return children;
+}
+
 export default function App() {
   return (
     <Routes>
+      <Route path="/admin-login" element={<AdminLogin />} />
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/services" element={<Services />} />
@@ -41,7 +51,7 @@ export default function App() {
         <Route path="/book" element={<Book />} />
         <Route path="/portal" element={<Portal />} />
       </Route>
-      <Route path="/admin" element={<AdminLayout />}>
+      <Route path="/admin" element={<RequireStaff><AdminLayout /></RequireStaff>}>
         <Route index element={<Dashboard />} />
         <Route path="patients" element={<Patients />} />
         <Route path="appointments" element={<Appointments />} />

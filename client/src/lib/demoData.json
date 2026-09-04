@@ -77,7 +77,8 @@
    "rating": 4.9,
    "days": "Mon – Sat",
    "bio": "10+ years of experience in family and cosmetic dentistry. Known for her gentle, painless approach.",
-   "image": null
+   "image": null,
+   "tenantId": 1
   },
   {
    "id": 2,
@@ -86,7 +87,8 @@
    "rating": 4.8,
    "days": "Mon, Wed, Fri",
    "bio": "Invisalign-certified orthodontist specializing in braces and clear aligners for all ages.",
-   "image": null
+   "image": null,
+   "tenantId": 1
   },
   {
    "id": 3,
@@ -95,7 +97,8 @@
    "rating": 4.7,
    "days": "Tue, Thu, Sat",
    "bio": "Expert in implants, wisdom tooth extractions and corrective jaw surgery.",
-   "image": null
+   "image": null,
+   "tenantId": 1
   },
   {
    "id": 4,
@@ -104,7 +107,17 @@
    "rating": 4.8,
    "days": "Mon – Sat",
    "bio": "Makes dental visits fun for kids — from first checkups to cavity care.",
-   "image": null
+   "image": null,
+   "tenantId": 1
+  },
+  {
+   "id": 90,
+   "tenantId": 2,
+   "name": "Dr. Vikram Malhotra",
+   "specialty": "Orthodontics",
+   "days": "Mon – Sat",
+   "email": "vikram@citydent.com",
+   "phone": "9845000022"
   }
  ],
  "patients": [
@@ -117,7 +130,8 @@
    "gender": "Male",
    "lastVisit": "2026-09-03",
    "status": "Active",
-   "notes": "Prefers evening appointments."
+   "notes": "Prefers evening appointments.",
+   "tenantId": 1
   },
   {
    "id": 2,
@@ -128,7 +142,8 @@
    "gender": "Female",
    "lastVisit": "2026-08-20",
    "status": "Active",
-   "notes": "Invisalign patient — tray 4."
+   "notes": "Invisalign patient — tray 4.",
+   "tenantId": 1
   },
   {
    "id": 3,
@@ -139,7 +154,8 @@
    "gender": "Male",
    "lastVisit": "2026-07-15",
    "status": "Active",
-   "notes": ""
+   "notes": "",
+   "tenantId": 1
   },
   {
    "id": 4,
@@ -150,7 +166,8 @@
    "gender": "Female",
    "lastVisit": "2026-06-10",
    "status": "Active",
-   "notes": "Interested in whitening."
+   "notes": "Interested in whitening.",
+   "tenantId": 1
   },
   {
    "id": 5,
@@ -161,7 +178,8 @@
    "gender": "Female",
    "lastVisit": "2026-08-28",
    "status": "Active",
-   "notes": "Implant consultation pending."
+   "notes": "Implant consultation pending.",
+   "tenantId": 1
   },
   {
    "id": 6,
@@ -172,7 +190,8 @@
    "gender": "Male",
    "lastVisit": "2026-08-05",
    "status": "Active",
-   "notes": "Implant — tooth 46."
+   "notes": "Implant — tooth 46.",
+   "tenantId": 1
   },
   {
    "id": 7,
@@ -183,7 +202,8 @@
    "gender": "Female",
    "lastVisit": "2026-08-31",
    "status": "Active",
-   "notes": "Extraction done 31 Aug."
+   "notes": "Extraction done 31 Aug.",
+   "tenantId": 1
   },
   {
    "id": 8,
@@ -194,7 +214,8 @@
    "gender": "Male",
    "lastVisit": "2026-05-22",
    "status": "Active",
-   "notes": ""
+   "notes": "",
+   "tenantId": 1
   },
   {
    "id": 9,
@@ -205,7 +226,8 @@
    "gender": "Male",
    "lastVisit": "2026-04-18",
    "status": "Active",
-   "notes": ""
+   "notes": "",
+   "tenantId": 1
   },
   {
    "id": 10,
@@ -216,7 +238,32 @@
    "gender": "Female",
    "lastVisit": "2026-08-12",
    "status": "Active",
-   "notes": "College student — prefers Sat slots."
+   "notes": "College student — prefers Sat slots.",
+   "tenantId": 1
+  },
+  {
+   "id": 201,
+   "tenantId": 2,
+   "name": "Rahul Khanna",
+   "phone": "9812345678",
+   "email": "rahul.k@example.com",
+   "age": 29,
+   "gender": "Male",
+   "lastVisit": "2026-08-28",
+   "status": "Active",
+   "notes": ""
+  },
+  {
+   "id": 301,
+   "tenantId": 3,
+   "name": "Ananya Singh",
+   "phone": "9812345679",
+   "email": "ananya.s@example.com",
+   "age": 41,
+   "gender": "Female",
+   "lastVisit": "2026-08-15",
+   "status": "Active",
+   "notes": ""
   }
  ],
  "appointments": [
@@ -229,7 +276,8 @@
    "type": "checkup",
    "procedure": "Follow-up checkup",
    "fee": 500,
-   "status": "Confirmed"
+   "status": "Confirmed",
+   "tenantId": 1
   },
   {
    "id": 2,
@@ -240,7 +288,8 @@
    "type": "orthodontic",
    "procedure": "Invisalign check - tray 4",
    "fee": 1500,
-   "status": "Confirmed"
+   "status": "Confirmed",
+   "tenantId": 1
   },
   {
    "id": 3,
@@ -251,7 +300,8 @@
    "type": "checkup",
    "procedure": "Teeth whitening consultation",
    "fee": 0,
-   "status": "Scheduled"
+   "status": "Scheduled",
+   "tenantId": 1
   },
   {
    "id": 4,
@@ -262,7 +312,8 @@
    "type": "surgery",
    "procedure": "Implant placement - tooth 46",
    "fee": 45000,
-   "status": "Scheduled"
+   "status": "Scheduled",
+   "tenantId": 1
   },
   {
    "id": 5,
@@ -273,7 +324,8 @@
    "type": "checkup",
    "procedure": "6-month cleaning",
    "fee": 800,
-   "status": "Scheduled"
+   "status": "Scheduled",
+   "tenantId": 1
   },
   {
    "id": 6,
@@ -284,6 +336,19 @@
    "type": "checkup",
    "procedure": "Implant follow-up X-ray",
    "fee": 500,
+   "status": "Scheduled",
+   "tenantId": 1
+  },
+  {
+   "id": 201,
+   "tenantId": 2,
+   "patientId": 201,
+   "dentistId": 90,
+   "date": "2026-09-04",
+   "time": "11:15",
+   "type": "checkup",
+   "procedure": "Braces adjustment",
+   "fee": 1500,
    "status": "Scheduled"
   }
  ],
@@ -299,7 +364,8 @@
     15,
     26
    ],
-   "notes": "Composite fillings on upper molars, 2 sittings."
+   "notes": "Composite fillings on upper molars, 2 sittings.",
+   "tenantId": 1
   },
   {
    "id": 2,
@@ -308,7 +374,8 @@
    "cost": 80000,
    "status": "Proposed",
    "teeth": [],
-   "notes": "14-month plan, tray changes every 2 weeks."
+   "notes": "14-month plan, tray changes every 2 weeks.",
+   "tenantId": 1
   },
   {
    "id": 3,
@@ -317,7 +384,8 @@
    "cost": 12000,
    "status": "Proposed",
    "teeth": [],
-   "notes": "Laser whitening, 2 sessions."
+   "notes": "Laser whitening, 2 sessions.",
+   "tenantId": 1
   },
   {
    "id": 4,
@@ -328,7 +396,8 @@
    "teeth": [
     46
    ],
-   "notes": "Single implant with crown."
+   "notes": "Single implant with crown.",
+   "tenantId": 1
   },
   {
    "id": 5,
@@ -337,7 +406,8 @@
    "cost": 1500,
    "status": "Completed",
    "teeth": [],
-   "notes": ""
+   "notes": "",
+   "tenantId": 1
   }
  ],
  "invoices": [
@@ -348,7 +418,8 @@
    "date": "2026-09-01",
    "items": "Fillings (2) + consultation",
    "amount": 2940,
-   "status": "Pending"
+   "status": "Pending",
+   "tenantId": 1
   },
   {
    "id": 2,
@@ -357,7 +428,8 @@
    "date": "2026-09-02",
    "items": "Invisalign installment 4",
    "amount": 6000,
-   "status": "Pending"
+   "status": "Pending",
+   "tenantId": 1
   },
   {
    "id": 3,
@@ -366,7 +438,8 @@
    "date": "2026-07-15",
    "items": "Cleaning + consultation",
    "amount": 800,
-   "status": "Paid"
+   "status": "Paid",
+   "tenantId": 1
   },
   {
    "id": 4,
@@ -375,7 +448,8 @@
    "date": "2026-08-28",
    "items": "Scaling and polishing",
    "amount": 1500,
-   "status": "Paid"
+   "status": "Paid",
+   "tenantId": 1
   },
   {
    "id": 5,
@@ -384,7 +458,8 @@
    "date": "2026-08-31",
    "items": "Wisdom tooth extraction",
    "amount": 2500,
-   "status": "Paid"
+   "status": "Paid",
+   "tenantId": 1
   },
   {
    "id": 6,
@@ -393,7 +468,8 @@
    "date": "2026-04-18",
    "items": "Consultation + X-ray",
    "amount": 1200,
-   "status": "Paid"
+   "status": "Paid",
+   "tenantId": 1
   },
   {
    "id": 7,
@@ -402,7 +478,8 @@
    "date": "2026-06-10",
    "items": "Consultation",
    "amount": 500,
-   "status": "Paid"
+   "status": "Paid",
+   "tenantId": 1
   },
   {
    "id": 8,
@@ -411,7 +488,8 @@
    "date": "2026-08-20",
    "items": "Invisalign installment 3",
    "amount": 800,
-   "status": "Paid"
+   "status": "Paid",
+   "tenantId": 1
   },
   {
    "id": 9,
@@ -420,7 +498,8 @@
    "date": "2026-05-22",
    "items": "Filling",
    "amount": 700,
-   "status": "Paid"
+   "status": "Paid",
+   "tenantId": 1
   },
   {
    "id": 10,
@@ -429,7 +508,8 @@
    "date": "2026-08-12",
    "items": "Cleaning",
    "amount": 900,
-   "status": "Paid"
+   "status": "Paid",
+   "tenantId": 1
   },
   {
    "id": 11,
@@ -438,7 +518,8 @@
    "date": "2026-08-05",
    "items": "Implant consultation + CBCT",
    "amount": 1000,
-   "status": "Paid"
+   "status": "Paid",
+   "tenantId": 1
   },
   {
    "id": 12,
@@ -447,7 +528,18 @@
    "date": "2026-08-15",
    "items": "Consultation",
    "amount": 500,
-   "status": "Paid"
+   "status": "Paid",
+   "tenantId": 1
+  },
+  {
+   "id": 201,
+   "tenantId": 2,
+   "patientId": 201,
+   "number": "INV-2026-101",
+   "date": "2026-09-02",
+   "amount": 1500,
+   "status": "Paid",
+   "procedure": "Braces adjustment"
   }
  ],
  "leads": [
@@ -459,7 +551,8 @@
    "score": 85,
    "status": "Converted",
    "notes": "Wants implants consultation",
-   "created_date": "2026-08-25"
+   "created_date": "2026-08-25",
+   "tenantId": 1
   },
   {
    "id": 2,
@@ -469,7 +562,8 @@
    "score": 75,
    "status": "Converted",
    "notes": "Implant enquiry from Google Ads",
-   "created_date": "2026-08-02"
+   "created_date": "2026-08-02",
+   "tenantId": 1
   },
   {
    "id": 3,
@@ -479,7 +573,8 @@
    "score": 60,
    "status": "New",
    "notes": "Whitening enquiry via booking page",
-   "created_date": "2026-09-01"
+   "created_date": "2026-09-01",
+   "tenantId": 1
   },
   {
    "id": 4,
@@ -489,7 +584,8 @@
    "score": 55,
    "status": "New",
    "notes": "Braces cost enquiry (DM)",
-   "created_date": "2026-09-01"
+   "created_date": "2026-09-01",
+   "tenantId": 1
   },
   {
    "id": 5,
@@ -499,7 +595,8 @@
    "score": 40,
    "status": "Contacted",
    "notes": "Walk-in enquiry, needs follow-up call",
-   "created_date": "2026-08-29"
+   "created_date": "2026-08-29",
+   "tenantId": 1
   },
   {
    "id": 6,
@@ -509,7 +606,8 @@
    "score": 65,
    "status": "Lost",
    "notes": "Chose another clinic (price)",
-   "created_date": "2026-08-10"
+   "created_date": "2026-08-10",
+   "tenantId": 1
   }
  ],
  "reviews": [
@@ -522,7 +620,8 @@
    "source": "In-Clinic",
    "status": "published",
    "date": "2026-08-31",
-   "response": ""
+   "response": "",
+   "tenantId": 1
   },
   {
    "id": 2,
@@ -533,7 +632,8 @@
    "source": "Google",
    "status": "published",
    "date": "2026-08-31",
-   "response": ""
+   "response": "",
+   "tenantId": 1
   },
   {
    "id": 3,
@@ -544,7 +644,8 @@
    "source": "Whatsapp",
    "status": "published",
    "date": "2026-08-31",
-   "response": "Thank you Rahul! We are working on reducing wait times."
+   "response": "Thank you Rahul! We are working on reducing wait times.",
+   "tenantId": 1
   },
   {
    "id": 4,
@@ -555,7 +656,8 @@
    "source": "Website",
    "status": "pending",
    "date": "2026-09-03",
-   "response": ""
+   "response": "",
+   "tenantId": 1
   },
   {
    "id": 5,
@@ -566,7 +668,8 @@
    "source": "Followup-Sms",
    "status": "pending",
    "date": "2026-08-31",
-   "response": ""
+   "response": "",
+   "tenantId": 1
   }
  ],
  "tasks": [
@@ -575,35 +678,40 @@
    "title": "Call back Priya Sharma about teeth whitening",
    "assignee": "Reception",
    "due": "2026-09-03",
-   "status": "pending"
+   "status": "pending",
+   "tenantId": 1
   },
   {
    "id": 2,
    "title": "Follow up with Anjali Mehta about implants",
    "assignee": "Dr. Ananya",
    "due": "2026-09-03",
-   "status": "pending"
+   "status": "pending",
+   "tenantId": 1
   },
   {
    "id": 3,
    "title": "Send appointment reminder to Vikram Singh",
    "assignee": "Front Desk",
    "due": "2026-09-04",
-   "status": "pending"
+   "status": "pending",
+   "tenantId": 1
   },
   {
    "id": 4,
    "title": "Order composite resin kit",
    "assignee": "Admin",
    "due": "2026-08-30",
-   "status": "completed"
+   "status": "completed",
+   "tenantId": 1
   },
   {
    "id": 5,
    "title": "Confirm Invisalign tray 5 delivery",
    "assignee": "Front Desk",
    "due": "2026-08-28",
-   "status": "completed"
+   "status": "completed",
+   "tenantId": 1
   }
  ],
  "inventory": [
@@ -614,7 +722,8 @@
    "quantity": 2,
    "unit": "pack",
    "minStock": 5,
-   "supplier": "Ortho Supplies India"
+   "supplier": "Ortho Supplies India",
+   "tenantId": 1
   },
   {
    "id": 2,
@@ -623,7 +732,8 @@
    "quantity": 3,
    "unit": "box",
    "minStock": 5,
-   "supplier": "MedDent Distributors"
+   "supplier": "MedDent Distributors",
+   "tenantId": 1
   },
   {
    "id": 3,
@@ -632,7 +742,8 @@
    "quantity": 4,
    "unit": "syringe",
    "minStock": 6,
-   "supplier": "BrightSmile Co."
+   "supplier": "BrightSmile Co.",
+   "tenantId": 1
   },
   {
    "id": 4,
@@ -641,7 +752,8 @@
    "quantity": 8,
    "unit": "kit",
    "minStock": 3,
-   "supplier": "MedDent Distributors"
+   "supplier": "MedDent Distributors",
+   "tenantId": 1
   },
   {
    "id": 5,
@@ -650,7 +762,8 @@
    "quantity": 40,
    "unit": "box",
    "minStock": 15,
-   "supplier": "SafeGuard Pvt Ltd"
+   "supplier": "SafeGuard Pvt Ltd",
+   "tenantId": 1
   },
   {
    "id": 6,
@@ -659,7 +772,8 @@
    "quantity": 60,
    "unit": "box",
    "minStock": 20,
-   "supplier": "SafeGuard Pvt Ltd"
+   "supplier": "SafeGuard Pvt Ltd",
+   "tenantId": 1
   },
   {
    "id": 7,
@@ -668,7 +782,8 @@
    "quantity": 100,
    "unit": "pcs",
    "minStock": 50,
-   "supplier": "MedDent Distributors"
+   "supplier": "MedDent Distributors",
+   "tenantId": 1
   },
   {
    "id": 8,
@@ -677,7 +792,8 @@
    "quantity": 15,
    "unit": "pcs",
    "minStock": 10,
-   "supplier": "Ortho Supplies India"
+   "supplier": "Ortho Supplies India",
+   "tenantId": 1
   },
   {
    "id": 9,
@@ -686,7 +802,8 @@
    "quantity": 25,
    "unit": "pcs",
    "minStock": 20,
-   "supplier": "RadImage Systems"
+   "supplier": "RadImage Systems",
+   "tenantId": 1
   },
   {
    "id": 10,
@@ -695,7 +812,8 @@
    "quantity": 10,
    "unit": "tub",
    "minStock": 5,
-   "supplier": "MedDent Distributors"
+   "supplier": "MedDent Distributors",
+   "tenantId": 1
   },
   {
    "id": 11,
@@ -704,7 +822,8 @@
    "quantity": 6,
    "unit": "kit",
    "minStock": 8,
-   "supplier": "SurgiCare India"
+   "supplier": "SurgiCare India",
+   "tenantId": 1
   },
   {
    "id": 12,
@@ -713,7 +832,8 @@
    "quantity": 4,
    "unit": "pcs",
    "minStock": 3,
-   "supplier": "Ortho Supplies India"
+   "supplier": "Ortho Supplies India",
+   "tenantId": 1
   }
  ],
  "automations": [
@@ -724,7 +844,8 @@
    "action": "Send SMS reminder",
    "active": true,
    "executions": 1240,
-   "lastRun": "2026-09-02 18:00"
+   "lastRun": "2026-09-02 18:00",
+   "tenantId": 1
   },
   {
    "id": 2,
@@ -733,7 +854,8 @@
    "action": "Send WhatsApp recall message",
    "active": true,
    "executions": 890,
-   "lastRun": "2026-09-01 09:00"
+   "lastRun": "2026-09-01 09:00",
+   "tenantId": 1
   },
   {
    "id": 3,
@@ -742,7 +864,8 @@
    "action": "Send WhatsApp birthday wish + discount coupon",
    "active": true,
    "executions": 210,
-   "lastRun": "2026-09-02 00:05"
+   "lastRun": "2026-09-02 00:05",
+   "tenantId": 1
   },
   {
    "id": 4,
@@ -751,7 +874,8 @@
    "action": "Send WhatsApp welcome message",
    "active": true,
    "executions": 145,
-   "lastRun": "2026-09-01 15:20"
+   "lastRun": "2026-09-01 15:20",
+   "tenantId": 1
   },
   {
    "id": 5,
@@ -760,7 +884,8 @@
    "action": "Send follow-up SMS",
    "active": true,
    "executions": 620,
-   "lastRun": "2026-09-02 11:00"
+   "lastRun": "2026-09-02 11:00",
+   "tenantId": 1
   },
   {
    "id": 6,
@@ -769,7 +894,8 @@
    "action": "Send WhatsApp review request with link",
    "active": true,
    "executions": 480,
-   "lastRun": "2026-09-02 11:05"
+   "lastRun": "2026-09-02 11:05",
+   "tenantId": 1
   },
   {
    "id": 7,
@@ -778,7 +904,8 @@
    "action": "Send rebooking SMS",
    "active": true,
    "executions": 85,
-   "lastRun": "2026-08-30 17:00"
+   "lastRun": "2026-08-30 17:00",
+   "tenantId": 1
   },
   {
    "id": 8,
@@ -787,7 +914,8 @@
    "action": "Send SMS payment reminder",
    "active": false,
    "executions": 40,
-   "lastRun": "2026-08-28 10:00"
+   "lastRun": "2026-08-28 10:00",
+   "tenantId": 1
   },
   {
    "id": 9,
@@ -796,7 +924,8 @@
    "action": "Send welcome pack (WhatsApp)",
    "active": true,
    "executions": 95,
-   "lastRun": "2026-09-01 16:00"
+   "lastRun": "2026-09-01 16:00",
+   "tenantId": 1
   },
   {
    "id": 10,
@@ -805,7 +934,8 @@
    "action": "Email monthly summary report",
    "active": true,
    "executions": 8,
-   "lastRun": "2026-09-01 08:00"
+   "lastRun": "2026-09-01 08:00",
+   "tenantId": 1
   }
  ],
  "recall": [
@@ -815,7 +945,8 @@
    "type": "Whitening touch-up",
    "dueDate": "2026-09-10",
    "status": "Due",
-   "channel": "WhatsApp"
+   "channel": "WhatsApp",
+   "tenantId": 1
   },
   {
    "id": 2,
@@ -823,7 +954,8 @@
    "type": "6-month cleaning",
    "dueDate": "2026-09-15",
    "status": "Due",
-   "channel": "WhatsApp"
+   "channel": "WhatsApp",
+   "tenantId": 1
   },
   {
    "id": 3,
@@ -831,7 +963,8 @@
    "type": "Post-extraction checkup",
    "dueDate": "2026-10-01",
    "status": "Due",
-   "channel": "SMS"
+   "channel": "SMS",
+   "tenantId": 1
   },
   {
    "id": 4,
@@ -839,7 +972,8 @@
    "type": "Annual checkup",
    "dueDate": "2026-04-20",
    "status": "Sent",
-   "channel": "SMS"
+   "channel": "SMS",
+   "tenantId": 1
   }
  ],
  "socialPosts": [
@@ -849,7 +983,8 @@
    "content": "Behind the scenes at SmileCraft — meet our sterilization-first operatory setup! #dentalsafety #bengaluru",
    "scheduledDate": "2026-08-28",
    "status": "published",
-   "likes": 132
+   "likes": 132,
+   "tenantId": 1
   },
   {
    "id": 2,
@@ -857,7 +992,8 @@
    "content": "Invisalign special this month — free consultation + scan. Book now!",
    "scheduledDate": "2026-08-30",
    "status": "published",
-   "likes": 87
+   "likes": 87,
+   "tenantId": 1
   },
   {
    "id": 3,
@@ -865,7 +1001,8 @@
    "content": "Free consultation week at SmileCraft — Sep 7 to Sep 12. Reply to book.",
    "scheduledDate": "2026-09-05",
    "status": "scheduled",
-   "likes": 0
+   "likes": 0,
+   "tenantId": 1
   },
   {
    "id": 4,
@@ -873,36 +1010,8 @@
    "content": "Video script: Root canal myths debunked by Dr. Ananya Rao",
    "scheduledDate": "2026-09-15",
    "status": "draft",
-   "likes": 0
-  }
- ],
- "clients": [
-  {
-   "id": 1,
-   "name": "SmileCraft Dental Clinic (MG Road)",
-   "plan": "Starter",
-   "mrr": 25000,
-   "status": "Active",
-   "since": "2026-04-01",
-   "renewal": "2026-10-01"
-  },
-  {
-   "id": 2,
-   "name": "CityDent (HSR Layout)",
-   "plan": "Growth",
-   "mrr": 30000,
-   "status": "Active",
-   "since": "2026-05-15",
-   "renewal": "2026-11-15"
-  },
-  {
-   "id": 3,
-   "name": "WhiteField Family Dental",
-   "plan": "Starter",
-   "mrr": 20000,
-   "status": "Trial",
-   "since": "2026-08-20",
-   "renewal": "2026-09-20"
+   "likes": 0,
+   "tenantId": 1
   }
  ],
  "whatsappChats": [
@@ -927,7 +1036,8 @@
      "text": "Yes please, next week sometime",
      "time": "2026-09-02 16:02"
     }
-   ]
+   ],
+   "tenantId": 1
   },
   {
    "id": 2,
@@ -945,7 +1055,8 @@
      "text": "Also do you have EMI options?",
      "time": "2026-09-01 11:11"
     }
-   ]
+   ],
+   "tenantId": 1
   },
   {
    "id": 3,
@@ -963,7 +1074,8 @@
      "text": "Glad you loved it, Kavya! See you in 6 months.",
      "time": "2026-08-12 13:15"
     }
-   ]
+   ],
+   "tenantId": 1
   }
  ],
  "qrCodes": [
@@ -971,32 +1083,123 @@
    "id": 1,
    "name": "Online Booking",
    "url": "/book",
-   "created_date": "2026-08-20"
+   "created_date": "2026-08-20",
+   "tenantId": 1
   },
   {
    "id": 2,
    "name": "Leave a Review",
    "url": "/reviews",
-   "created_date": "2026-08-22"
+   "created_date": "2026-08-22",
+   "tenantId": 1
   }
  ],
  "toothChartStates": [
   {
    "tooth": 14,
-   "state": "filled"
+   "state": "filled",
+   "tenantId": 1
   },
   {
    "tooth": 15,
-   "state": "filled"
+   "state": "filled",
+   "tenantId": 1
   },
   {
    "tooth": 26,
-   "state": "filled"
+   "state": "filled",
+   "tenantId": 1
   },
   {
    "tooth": 46,
-   "state": "implant"
+   "state": "implant",
+   "tenantId": 1
   }
  ],
- "nextId": 1000
+ "nextId": 1000,
+ "tenants": [
+  {
+   "id": 1,
+   "name": "SmileCraft Dental Clinic",
+   "location": "MG Road, Bengaluru",
+   "plan": "Growth",
+   "mrr": 25000,
+   "status": "Active",
+   "since": "2026-04-01",
+   "renewal": "2026-10-01",
+   "brandColor": "189 94% 43%"
+  },
+  {
+   "id": 2,
+   "name": "CityDent",
+   "location": "HSR Layout, Bengaluru",
+   "plan": "Growth",
+   "mrr": 30000,
+   "status": "Active",
+   "since": "2026-05-15",
+   "renewal": "2026-11-15",
+   "brandColor": "262 83% 58%"
+  },
+  {
+   "id": 3,
+   "name": "WhiteField Family Dental",
+   "location": "Whitefield, Bengaluru",
+   "plan": "Starter",
+   "mrr": 20000,
+   "status": "Trial",
+   "since": "2026-08-20",
+   "renewal": "2026-09-20",
+   "brandColor": "38 92% 50%"
+  }
+ ],
+ "staff": [
+  {
+   "id": 1,
+   "tenantId": 1,
+   "name": "Aarav Mehta",
+   "email": "admin@smilecraft.com",
+   "password": "admin123",
+   "role": "admin"
+  },
+  {
+   "id": 2,
+   "tenantId": 1,
+   "name": "Divya Nair",
+   "email": "front@smilecraft.com",
+   "password": "front123",
+   "role": "front"
+  },
+  {
+   "id": 3,
+   "tenantId": 1,
+   "name": "Dr. Ananya Rao",
+   "email": "dr.rao@smilecraft.com",
+   "password": "dentist123",
+   "role": "dentist"
+  },
+  {
+   "id": 4,
+   "tenantId": 2,
+   "name": "Nikhil Shah",
+   "email": "admin@citydent.com",
+   "password": "admin123",
+   "role": "admin"
+  },
+  {
+   "id": 5,
+   "tenantId": 3,
+   "name": "Meera Joshi",
+   "email": "admin@whitefield.com",
+   "password": "admin123",
+   "role": "admin"
+  },
+  {
+   "id": 6,
+   "tenantId": null,
+   "name": "Agency Owner",
+   "email": "agency@dentos.app",
+   "password": "agency123",
+   "role": "super"
+  }
+ ]
 }

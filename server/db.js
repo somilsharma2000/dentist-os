@@ -9,7 +9,7 @@ function load(seedFn) {
   if (fs.existsSync(DB_PATH)) {
     db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
   } else {
-    db = seedFn();
+    db = typeof seedFn === "function" ? seedFn() : seedFn;
     save();
   }
 }

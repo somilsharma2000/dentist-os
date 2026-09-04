@@ -51,6 +51,8 @@ Deploy anywhere that runs Node 18+ (Render, Railway, Fly.io, a VPS). Set `PORT` 
 - **Patient portal** — phone-number login (auto-registration for new patients), showing appointments, treatment plans, and invoices
 
 ### Admin — DentOS (`/admin`)
+
+Staff sign-in required (multi-tenant): `admin@smilecraft.com` / `admin123` (clinic admin), `front@smilecraft.com` / `front123` (receptionist), `dr.rao@smilecraft.com` / `dentist123` (dentist), `agency@dentos.app` / `agency123` (agency owner — all clinics + tenant switcher). Each clinic's staff only see their own data, themed in their brand color.
 | Area | Modules |
 |---|---|
 | Overview | **Dashboard** — today's schedule, revenue, goals tracking, lead pipeline, tasks, revenue trend chart, low-stock alerts |

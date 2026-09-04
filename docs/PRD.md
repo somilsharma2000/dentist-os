@@ -88,3 +88,11 @@ Indian dental clinics run on paper or fragmented tools:
 - Deploy server build to Render/Railway (static Pages demo is live)
 - Real-device test of booking wizard (native date picker + chips)
 - Wire review/booking notifications to real SMS/WhatsApp providers
+
+
+## Multi-tenant SaaS features (Phase 11)
+
+As an agency, I can onboard client clinics so each gets an isolated workspace:
+- Clinic staff sign in with email/password; their data (patients, appointments, invoices, leads, reviews, tasks, inventory, QR codes, WhatsApp threads) is visible only to their clinic.
+- Role-based access: Receptionists manage front-desk modules; Dentists see clinical modules; Clinic Admins manage everything; the Agency Owner oversees all clinics with a tenant switcher and Agency Mgmt (plans, MRR, renewals).
+- White-label: each clinic's brand color themes their admin workspace.

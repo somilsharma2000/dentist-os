@@ -1,8 +1,14 @@
 // In-browser demo API — mirrors server/api.js exactly (used for the GitHub Pages
 // static deployment, where there is no backend). Data persists in localStorage.
+// MULTI-TENANT: every admin route requires a staff session and is scoped to the
+// staff member's clinic (tenantId). The agency owner (role "super") sees all
+// clinics and can switch the active tenant. Public routes always serve tenant 1
+// (SmileCraft), the clinic that owns the public website.
 import dbSeed from './demoData.json';
+import { getSession } from './auth';
 
-const LS_KEY = 'dentos-demo-db-v2';
+const LS_KEY = 'dentos-demo-db-v3';
+const PUBLIC_TENANT = 1; // the clinic that owns the public website
 
 function clone(o) {
   return JSON.parse(JSON.stringify(o));
@@ -46,35 +52,88 @@ function err(status, message) {
   return e;
 }
 
+// ---- Session & tenant scoping ----
+
 const TABLES = [
   'patients', 'dentists', 'appointments', 'treatmentPlans', 'invoices', 'leads', 'reviews',
-  'tasks', 'inventory', 'automations', 'recall', 'socialPosts', 'clients', 'whatsappChats', 'qrCodes'
+  'tasks', 'inventory', 'automations', 'recall', 'socialPosts', 'tenants', 'staff',
+  'whatsappChats', 'qrCodes'
 ];
+const TENANT_TABLES = new Set(TABLES.filter((t) => t !== 'tenants' && t !== 'staff'));
+const SUPER_TABLES = new Set(['tenants', 'staff']);
+const PUBLIC_TABLES = new Set(['dentists', 'reviews']); // readable without a session
 
-function pName(id) {
-  const p = db.patients.find((x) => x.id === Number(id));
+function session() {
+  return getSession();
+}
+
+function staff() {
+  const s = session();
+  if (!s || !s.staff) throw err(401, 'Please sign in.');
+  return s;
+}
+
+function requireSuper() {
+  const s = staff();
+  if (s.staff.role !== 'super') throw err(403, 'Agency owner access only.');
+  return s;
+}
+
+// Active tenant: super's switched view, else the staff member's clinic. null = all clinics.
+function tid() {
+  const s = session();
+  if (!s || !s.staff) return PUBLIC_TENANT;
+  if (s.staff.role === 'super') return s.viewTenantId || null;
+  return s.staff.tenantId || PUBLIC_TENANT;
+}
+
+function sc(arr, t) {
+  const active = t === undefined ? tid() : t;
+  if (active === null) return arr;
+  return arr.filter((x) => !x.tenantId || String(x.tenantId) === String(active));
+}
+
+function stripSecrets(user) {
+  const { password, ...rest } = user;
+  return rest;
+}
+
+function login(body) {
+  const { email, password } = body || {};
+  const user = db.staff.find(
+    (u) => String(u.email).toLowerCase() === String(email || '').trim().toLowerCase()
+  );
+  if (!user || user.password !== password) throw err(401, 'Invalid email or password.');
+  const tenant = db.tenants.find((t) => t.id === user.tenantId) || null;
+  return { staff: stripSecrets(user), tenant };
+}
+
+function pName(id, t) {
+  const p = sc(db.patients, t).find((x) => x.id === Number(id));
   return p ? p.name : 'Unknown';
 }
 
-function dName(id) {
-  const d = db.dentists.find((x) => x.id === Number(id));
+function dName(id, t) {
+  const d = sc(db.dentists, t).find((x) => x.id === Number(id));
   return d ? d.name : '—';
 }
 
 function getDashboard() {
+  const t = tid();
+  const S = (arr) => sc(arr, t);
   const today = todayISO();
   const month = today.slice(0, 7);
 
-  const appointmentsToday = db.appointments
+  const appointmentsToday = S(db.appointments)
     .filter((a) => a.date === today)
     .sort((a, b) => a.time.localeCompare(b.time))
-    .map((a) => ({ ...a, patientName: pName(a.patientId), dentistName: dName(a.dentistId) }));
+    .map((a) => ({ ...a, patientName: pName(a.patientId, t), dentistName: dName(a.dentistId, t) }));
 
-  const revenueThisMonth = db.invoices
+  const revenueThisMonth = S(db.invoices)
     .filter((i) => i.status === 'Paid' && String(i.date).startsWith(month))
     .reduce((s, i) => s + (i.amount || 0), 0);
 
-  const pendingInvoices = db.invoices.filter((i) => i.status === 'Pending');
+  const pendingInvoices = S(db.invoices).filter((i) => i.status === 'Pending');
 
   const goals = [
     { key: 'revenue', label: 'Revenue', current: revenueThisMonth + (db.settings.monthly.revenue || 0), target: db.settings.goals.revenue, unit: '₹' },
@@ -89,7 +148,7 @@ function getDashboard() {
     const d = new Date(now.getTime() + (now.getTimezoneOffset() + 330) * 60000 - i * 30 * 86400000);
     trend[d.toISOString().slice(0, 7)] = 0;
   }
-  db.invoices
+  S(db.invoices)
     .filter((i) => i.status === 'Paid')
     .forEach((i) => {
       if (trend[i.date.slice(0, 7)] !== undefined) trend[i.date.slice(0, 7)] += i.amount || 0;
@@ -100,21 +159,21 @@ function getDashboard() {
   }));
 
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-  const newLeads = db.leads.filter((l) => (l.created_date || '') >= weekAgo);
-  const converted = db.leads.filter((l) => l.status === 'Converted').length;
+  const newLeads = S(db.leads).filter((l) => (l.created_date || '') >= weekAgo);
+  const converted = S(db.leads).filter((l) => l.status === 'Converted').length;
 
   return {
     today,
     appointmentsToday,
     todayCount: appointmentsToday.length,
     revenueThisMonth,
-    activePatients: db.patients.filter((p) => p.status === 'Active').length,
-    totalPatients: db.patients.length,
+    activePatients: S(db.patients).filter((p) => p.status === 'Active').length,
+    totalPatients: S(db.patients).length,
     pendingInvoicesCount: pendingInvoices.length,
     pendingInvoicesAmount: pendingInvoices.reduce((s, i) => s + (i.amount || 0), 0),
     dailySummary: {
       date: today,
-      revenueToday: db.invoices
+      revenueToday: S(db.invoices)
         .filter((i) => i.status === 'Paid' && i.date === today)
         .reduce((s, i) => s + (i.amount || 0), 0),
       completedVisits: appointmentsToday.filter((a) => a.status === 'Completed').length,
@@ -123,25 +182,25 @@ function getDashboard() {
     goals,
     leadPipeline: {
       newThisWeek: newLeads.length,
-      conversionRate: db.leads.length ? Math.round((converted / db.leads.length) * 100) : 0,
-      top: [...db.leads].sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 3)
+      conversionRate: S(db.leads).length ? Math.round((converted / S(db.leads).length) * 100) : 0,
+      top: [...S(db.leads)].sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 3)
     },
-    tasks: db.tasks.filter((t) => t.status === 'pending'),
+    tasks: S(db.tasks).filter((ta) => ta.status === 'pending'),
     revenueTrend,
-    recentPatients: [...db.patients]
+    recentPatients: [...S(db.patients)]
       .sort((a, b) => (b.lastVisit || '').localeCompare(a.lastVisit || ''))
       .slice(0, 5),
-    pendingTreatmentPlans: db.treatmentPlans
+    pendingTreatmentPlans: S(db.treatmentPlans)
       .filter((tp) => tp.status !== 'Completed')
-      .map((tp) => ({ ...tp, patientName: pName(tp.patientId) })),
-    lowStock: db.inventory.filter((i) => i.quantity <= i.minStock)
+      .map((tp) => ({ ...tp, patientName: pName(tp.patientId, t) })),
+    lowStock: S(db.inventory).filter((i) => i.quantity <= i.minStock)
   };
 }
 
 function getSlots(params) {
   const date = params.get('date');
   const dentistId = params.get('dentistId');
-  const booked = db.appointments
+  const booked = sc(db.appointments, PUBLIC_TENANT)
     .filter((a) => a.date === date && (!dentistId || String(a.dentistId) === String(dentistId)))
     .map((a) => a.time);
   const all = ['09:00', '09:45', '10:30', '11:15', '12:00', '14:00', '14:45', '15:30', '16:15', '17:00', '17:45'];
@@ -153,17 +212,18 @@ function createBooking(body) {
   if (!name || !phone || !date || !time || !service) {
     throw err(400, 'Missing required booking details.');
   }
-  let patient = db.patients.find((p) => p.phone === String(phone).trim());
+  const pool = sc(db.patients, PUBLIC_TENANT);
+  let patient = pool.find((p) => p.phone === String(phone).trim());
   const isNew = !patient;
   if (!patient) {
     patient = {
-      id: nextId(), name, phone: String(phone).trim(), email: email || '', age: null,
-      gender: '', lastVisit: date, status: 'Active', notes: notes || ''
+      id: nextId(), tenantId: PUBLIC_TENANT, name, phone: String(phone).trim(), email: email || '',
+      age: null, gender: '', lastVisit: date, status: 'Active', notes: notes || ''
     };
     db.patients.push(patient);
   }
   const appt = {
-    id: nextId(), patientId: patient.id, dentistId: dentistId ? Number(dentistId) : null,
+    id: nextId(), tenantId: PUBLIC_TENANT, patientId: patient.id, dentistId: dentistId ? Number(dentistId) : null,
     date, time, type: 'checkup', procedure: service, fee: 0, status: 'Scheduled'
   };
   db.appointments.push(appt);
@@ -177,7 +237,7 @@ function publicReview(body) {
     throw err(400, 'Name, rating and review text are required.');
   }
   const review = {
-    id: nextId(), name, phone: phone || '', rating: Number(rating), text,
+    id: nextId(), tenantId: PUBLIC_TENANT, name, phone: phone || '', rating: Number(rating), text,
     source: 'Website', status: 'pending', date: todayISO(), response: '',
     created_date: new Date().toISOString()
   };
@@ -187,27 +247,28 @@ function publicReview(body) {
 }
 
 function portalLogin(body) {
-  const patient = db.patients.find((p) => p.phone === String((body || {}).phone || '').trim());
+  const patient = sc(db.patients, PUBLIC_TENANT)
+    .find((p) => p.phone === String((body || {}).phone || '').trim());
   if (!patient) throw err(404, 'No account found with this phone number. Please register.');
   return {
     patient: clone(patient),
-    appointments: db.appointments
+    appointments: sc(db.appointments, PUBLIC_TENANT)
       .filter((a) => a.patientId === patient.id)
-      .map((a) => ({ ...a, dentistName: dName(a.dentistId) })),
-    treatmentPlans: clone(db.treatmentPlans.filter((tp) => tp.patientId === patient.id)),
-    invoices: clone(db.invoices.filter((i) => i.patientId === patient.id))
+      .map((a) => ({ ...a, dentistName: dName(a.dentistId, PUBLIC_TENANT) })),
+    treatmentPlans: clone(sc(db.treatmentPlans, PUBLIC_TENANT).filter((tp) => tp.patientId === patient.id)),
+    invoices: clone(sc(db.invoices, PUBLIC_TENANT).filter((i) => i.patientId === patient.id))
   };
 }
 
 function portalRegister(body) {
   const { name, phone, email, age, gender } = body;
   if (!name || !phone) throw err(400, 'Name and phone are required.');
-  if (db.patients.find((p) => p.phone === String(phone).trim())) {
+  if (sc(db.patients, PUBLIC_TENANT).find((p) => p.phone === String(phone).trim())) {
     throw err(409, 'An account already exists with this phone number. Please log in.');
   }
   const patient = {
-    id: nextId(), name, phone: String(phone).trim(), email: email || '', age: age || null,
-    gender: gender || '', lastVisit: todayISO(), status: 'Active', notes: ''
+    id: nextId(), tenantId: PUBLIC_TENANT, name, phone: String(phone).trim(), email: email || '',
+    age: age || null, gender: gender || '', lastVisit: todayISO(), status: 'Active', notes: ''
   };
   db.patients.push(patient);
   persist();
@@ -218,22 +279,49 @@ function routeGet(path) {
   const [p, q] = path.split('?');
   const params = new URLSearchParams(q || '');
   const parts = p.split('/').filter(Boolean);
+  const s = session();
 
-  if (p === '/dashboard') return clone(getDashboard());
-  if (p === '/settings') return clone(db.settings);
-  if (p === '/tooth-chart') return clone(db.toothChartStates || []);
+  if (p === '/auth/me') {
+    const st = staff();
+    return { staff: st.staff, tenant: st.tenant || null, viewTenantId: st.viewTenantId || null };
+  }
+  if (p === '/dashboard') {
+    staff();
+    return clone(getDashboard());
+  }
+  if (p === '/settings') return clone(db.settings); // public site content (tenant 1)
+  if (p === '/tooth-chart') {
+    staff();
+    return clone(sc(db.toothChartStates || []));
+  }
   if (p === '/slots') return getSlots(params);
 
-  if (parts.length === 1 && TABLES.includes(parts[0])) return clone(db[parts[0]]);
+  if (parts.length === 1 && TABLES.includes(parts[0])) {
+    const table = parts[0];
+    if (!s || !s.staff) {
+      // Unauthenticated: only the public read-view of tenant 1 is exposed.
+      if (table === 'reviews') return clone(sc(db.reviews, PUBLIC_TENANT).filter((r) => r.status === 'published'));
+      if (PUBLIC_TABLES.has(table)) return clone(sc(db[table], PUBLIC_TENANT));
+      throw err(401, 'Please sign in.');
+    }
+    if (SUPER_TABLES.has(table)) requireSuper();
+    if (table === 'staff') return clone(sc(db.staff).map(stripSecrets));
+    if (table === 'tenants') return clone(db.tenants);
+    return clone(sc(db[table]));
+  }
   if (parts.length === 2 && TABLES.includes(parts[0])) {
-    const item = db[parts[0]].find((x) => String(x.id) === parts[1]);
+    staff();
+    const list = sc(db[parts[0]]);
+    const item = list.find((x) => String(x.id) === parts[1]);
     if (!item) throw err(404, 'Not found');
-    return clone(item);
+    return clone(parts[0] === 'staff' ? stripSecrets(item) : item);
   }
   throw err(404, 'Not found: ' + p);
 }
 
 function routePost(path, body) {
+  if (path === '/auth/login') return login(body);
+  if (path === '/auth/logout') return { ok: true };
   if (path === '/bookings') return createBooking(body);
   if (path === '/reviews/public') return publicReview(body);
   if (path === '/portal/login') return portalLogin(body);
@@ -241,10 +329,16 @@ function routePost(path, body) {
 
   const parts = path.split('/').filter(Boolean);
   if (parts.length === 1 && TABLES.includes(parts[0])) {
-    const item = { id: nextId(), created_date: new Date().toISOString(), ...(body || {}) };
+    staff();
+    const item = {
+      id: nextId(), created_date: new Date().toISOString(),
+      ...(TENANT_TABLES.has(parts[0]) && tid() ? { tenantId: tid() } : {}),
+      ...(tid() === null && TENANT_TABLES.has(parts[0]) ? { tenantId: PUBLIC_TENANT } : {}),
+      ...(body || {})
+    };
     db[parts[0]].push(item);
     persist();
-    return clone(item);
+    return clone(parts[0] === 'staff' ? stripSecrets(item) : item);
   }
   throw err(404, 'Not found: ' + path);
 }
@@ -253,25 +347,30 @@ function routePut(path, body) {
   const parts = path.split('/').filter(Boolean);
 
   if (path === '/settings') {
+    staff();
     db.settings = { ...db.settings, ...(body || {}) };
     persist();
     return clone(db.settings);
   }
   if (parts.length === 2 && parts[0] === 'tooth-chart') {
+    staff();
     db.toothChartStates = db.toothChartStates || [];
-    const i = db.toothChartStates.findIndex((t) => t.tooth === Number(parts[1]));
-    if (i >= 0) db.toothChartStates[i].state = (body || {}).state;
-    else db.toothChartStates.push({ tooth: Number(parts[1]), state: (body || {}).state });
+    const scoped = sc(db.toothChartStates);
+    const existing = scoped.find((t) => t.tooth === Number(parts[1]));
+    if (existing) existing.state = (body || {}).state;
+    else db.toothChartStates.push({ tenantId: tid() || PUBLIC_TENANT, tooth: Number(parts[1]), state: (body || {}).state });
     persist();
-    return clone(db.toothChartStates);
+    return clone(sc(db.toothChartStates));
   }
   if (parts.length === 2 && TABLES.includes(parts[0])) {
-    const arr = db[parts[0]];
+    staff();
+    if (parts[0] === 'staff') requireSuper();
+    const arr = parts[0] === 'tenants' ? db.tenants : sc(db[parts[0]]);
     const i = arr.findIndex((x) => String(x.id) === parts[1]);
     if (i < 0) throw err(404, 'Not found');
     arr[i] = { ...arr[i], ...(body || {}) };
     persist();
-    return clone(arr[i]);
+    return clone(parts[0] === 'staff' ? stripSecrets(arr[i]) : arr[i]);
   }
   throw err(404, 'Not found: ' + path);
 }
@@ -279,10 +378,17 @@ function routePut(path, body) {
 function routeDel(path) {
   const parts = path.split('/').filter(Boolean);
   if (parts.length === 2 && TABLES.includes(parts[0])) {
-    const arr = db[parts[0]];
-    const i = arr.findIndex((x) => String(x.id) === parts[1]);
+    staff();
+    if (parts[0] === 'staff') requireSuper();
+    const full = db[parts[0]];
+    const i = full.findIndex((x) => String(x.id) === parts[1]);
     if (i < 0) throw err(404, 'Not found');
-    arr.splice(i, 1);
+    const item = full[i];
+    const t = tid();
+    if (t !== null && item.tenantId && String(item.tenantId) !== String(t)) {
+      throw err(403, 'This record belongs to another clinic.');
+    }
+    full.splice(i, 1);
     persist();
     return { ok: true };
   }
