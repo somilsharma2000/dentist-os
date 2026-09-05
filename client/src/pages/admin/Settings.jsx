@@ -46,7 +46,7 @@ export default function Settings() {
     async function loadSettings() {
       try {
         setLoading(true);
-        const data = await api.get('/settings');
+        const data = await api.get('/settings/mine');
         if (data) {
           setSettings({
             clinicName: data.clinicName || '',

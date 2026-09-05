@@ -55,6 +55,11 @@ function sc(arr, t) {
   return arr.filter((x) => !x.tenantId || String(x.tenantId) === String(t));
 }
 
+function tenantSettings(t) {
+  const tn = (db.tenants || []).find((x) => String(x.id) === String(t));
+  return (tn && tn.settings) ? tn.settings : db.settings;
+}
+
 function stripSecrets(u) {
   const { password, ...rest } = u;
   return rest;
@@ -201,13 +206,28 @@ TABLES.forEach((t) => {
 });
 
 // ---- Settings ----
-router.get('/settings', (req, res) => res.json(db.settings));
+router.get('/settings/mine', (req, res) => {
+  const s = staff(req);
+  if (!s) return res.status(401).json({ error: 'Please sign in.' });
+  res.json(tenantSettings(tid(req) ?? 1));
+});
+
+// /settings is ALWAYS the public website (tenant 1) — staff sessions must not
+// change what the public site shows. Staff pages use /settings/mine.
+router.get('/settings', (req, res) => res.json(tenantSettings(1)));
 router.put('/settings', (req, res) => {
   const s = staff(req);
   if (!s) return res.status(401).json({ error: 'Please sign in.' });
-  db.settings = { ...db.settings, ...req.body };
+  const t = tid(req) ?? 1;
+  if (String(t) === '1') {
+    db.settings = { ...db.settings, ...req.body };
+  } else {
+    const tn = db.tenants.find((x) => String(x.id) === String(t));
+    if (!tn) return res.status(404).json({ error: 'Clinic not found.' });
+    tn.settings = { ...(tn.settings || db.settings), ...req.body };
+  }
   save();
-  res.json(db.settings);
+  res.json(tenantSettings(t));
 });
 
 // ---- Dashboard ----
@@ -243,10 +263,10 @@ router.get('/dashboard', (req, res) => {
   };
 
   const goals = [
-    { key: 'revenue', label: 'Revenue', current: revenueThisMonth + (db.settings.monthly.revenue || 0), target: db.settings.goals.revenue, unit: '₹' },
-    { key: 'newPatients', label: 'New Patients', current: db.settings.monthly.newPatients, target: db.settings.goals.newPatients, unit: '' },
-    { key: 'treatments', label: 'Treatments Completed', current: db.settings.monthly.treatments, target: db.settings.goals.treatments, unit: '' },
-    { key: 'reviews', label: 'Reviews Collected', current: db.settings.monthly.reviews, target: db.settings.goals.reviews, unit: '' }
+    { key: 'revenue', label: 'Revenue', current: revenueThisMonth + ((tenantSettings(t).monthly || {}).revenue || 0), target: (tenantSettings(t).goals || {}).revenue, unit: '₹' },
+    { key: 'newPatients', label: 'New Patients', current: (tenantSettings(t).monthly || {}).newPatients || 0, target: (tenantSettings(t).goals || {}).newPatients, unit: '' },
+    { key: 'treatments', label: 'Treatments Completed', current: (tenantSettings(t).monthly || {}).treatments || 0, target: (tenantSettings(t).goals || {}).treatments, unit: '' },
+    { key: 'reviews', label: 'Reviews Collected', current: (tenantSettings(t).monthly || {}).reviews || 0, target: (tenantSettings(t).goals || {}).reviews, unit: '' }
   ];
 
   const trend = {};

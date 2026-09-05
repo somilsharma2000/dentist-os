@@ -63,6 +63,11 @@ const TENANT_TABLES = new Set(TABLES.filter((t) => t !== 'tenants' && t !== 'sta
 const SUPER_TABLES = new Set(['tenants', 'staff']);
 const PUBLIC_TABLES = new Set(['dentists', 'reviews']); // readable without a session
 
+function tenantSettings(t) {
+  const tn = (db.tenants || []).find((x) => String(x.id) === String(t));
+  return (tn && tn.settings) ? tn.settings : db.settings;
+}
+
 function session() {
   return getSession();
 }
@@ -136,10 +141,10 @@ function getDashboard() {
   const pendingInvoices = S(db.invoices).filter((i) => i.status === 'Pending');
 
   const goals = [
-    { key: 'revenue', label: 'Revenue', current: revenueThisMonth + (db.settings.monthly.revenue || 0), target: db.settings.goals.revenue, unit: '₹' },
-    { key: 'newPatients', label: 'New Patients', current: db.settings.monthly.newPatients, target: db.settings.goals.newPatients, unit: '' },
-    { key: 'treatments', label: 'Treatments Completed', current: db.settings.monthly.treatments, target: db.settings.goals.treatments, unit: '' },
-    { key: 'reviews', label: 'Reviews Collected', current: db.settings.monthly.reviews, target: db.settings.goals.reviews, unit: '' }
+    { key: 'revenue', label: 'Revenue', current: revenueThisMonth + ((tenantSettings(t).monthly || {}).revenue || 0), target: (tenantSettings(t).goals || {}).revenue, unit: '₹' },
+    { key: 'newPatients', label: 'New Patients', current: (tenantSettings(t).monthly || {}).newPatients || 0, target: (tenantSettings(t).goals || {}).newPatients, unit: '' },
+    { key: 'treatments', label: 'Treatments Completed', current: (tenantSettings(t).monthly || {}).treatments || 0, target: (tenantSettings(t).goals || {}).treatments, unit: '' },
+    { key: 'reviews', label: 'Reviews Collected', current: (tenantSettings(t).monthly || {}).reviews || 0, target: (tenantSettings(t).goals || {}).reviews, unit: '' }
   ];
 
   const trend = {};
@@ -307,7 +312,13 @@ function routeGet(path) {
     if (!tn) throw err(404, 'Clinic not found.');
     return clone({ id: tn.id, name: tn.name, integrations: tn.integrations || {} });
   }
-  if (p === '/settings') return clone(db.settings); // public site content (tenant 1)
+  // /settings is ALWAYS the public website (tenant 1) — a logged-in staff session
+  // must never change public site content. Staff pages use /settings/mine.
+  if (p === '/settings/mine') {
+    staff();
+    return clone(tenantSettings(tid() ?? PUBLIC_TENANT));
+  }
+  if (p === '/settings') return clone(tenantSettings(PUBLIC_TENANT));
   if (p === '/tooth-chart') {
     staff();
     return clone(sc(db.toothChartStates || []));
@@ -367,9 +378,17 @@ function routePut(path, body) {
 
   if (path === '/settings') {
     staff();
-    db.settings = { ...db.settings, ...(body || {}) };
+    const t = tid() ?? PUBLIC_TENANT;
+    if (String(t) === String(PUBLIC_TENANT)) {
+      // Tenant 1 owns the public website — update global settings
+      db.settings = { ...db.settings, ...(body || {}) };
+    } else {
+      const tn = db.tenants.find((x) => String(x.id) === String(t));
+      if (!tn) throw err(404, 'Clinic not found.');
+      tn.settings = { ...(tn.settings || db.settings), ...(body || {}) };
+    }
     persist();
-    return clone(db.settings);
+    return clone(tenantSettings(t));
   }
   if (parts.length === 2 && parts[0] === 'tooth-chart') {
     staff();

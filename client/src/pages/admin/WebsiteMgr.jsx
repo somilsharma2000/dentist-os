@@ -31,7 +31,7 @@ export default function WebsiteMgr() {
     async function loadSettings() {
       try {
         setLoading(true);
-        const data = await api.get('/settings');
+        const data = await api.get('/settings/mine');
         if (data) {
           setSettings({
             heroTitle: data.heroTitle || 'Advanced Dental Care for Your Perfect Smile',
