@@ -66,7 +66,10 @@ export default function ReviewsAdmin() {
       setSubmittingResponse(true);
       await api.put(`/reviews/${selectedReview.id}`, {
         response: responseText,
-        status: 'responded'
+        // Keep the review's publication status — a response used to flip
+        // 'published' reviews to 'responded', silently hiding them from the
+        // public site.
+        status: selectedReview.status === 'pending' ? 'pending' : selectedReview.status
       });
       setSelectedReview(null);
       setResponseText('');

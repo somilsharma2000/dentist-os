@@ -9,22 +9,30 @@ export function formatDate(d) {
   return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+// IST helpers — correct regardless of the visitor's own timezone.
+// (The old getTimezoneOffset()+330 arithmetic returned UTC's date
+// for anyone browsing from IST itself, among other zones.)
+const istDateFmt = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
+});
+const istDayFmt = new Intl.DateTimeFormat('en-IN', {
+  timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short'
+});
+
 export function todayISO() {
-  const now = new Date();
-  const ist = new Date(now.getTime() + (now.getTimezoneOffset() + 330) * 60000);
-  return ist.toISOString().slice(0, 10);
+  return istDateFmt.format(new Date()); // YYYY-MM-DD
 }
 
 export function next7Days() {
-  const now = new Date();
-  const ist = new Date(now.getTime() + (now.getTimezoneOffset() + 330) * 60000);
+  // Anchor on the current IST date, then step whole calendar days.
+  const [y, m, d] = todayISO().split('-').map(Number);
   const days = [];
   for (let i = 0; i < 7; i++) {
-    const d = new Date(ist.getTime() + i * 86400000);
+    const dt = new Date(Date.UTC(y, m - 1, d + i));
     days.push({
-      iso: d.toISOString().slice(0, 10),
-      dayName: d.toLocaleDateString('en-IN', { weekday: 'short' }),
-      label: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+      iso: dt.toISOString().slice(0, 10),
+      dayName: new Intl.DateTimeFormat('en-IN', { timeZone: 'UTC', weekday: 'short' }).format(dt),
+      label: new Intl.DateTimeFormat('en-IN', { timeZone: 'UTC', day: 'numeric', month: 'short' }).format(dt)
     });
   }
   return days;

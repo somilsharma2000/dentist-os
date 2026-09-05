@@ -66,9 +66,12 @@ export default function Invoices() {
     e.preventDefault();
     if (!patientId || !items || !amount) return;
 
-    const invNumber = `INV-${new Date().getFullYear()}-${String(
-      invoices.length + 1
-    ).padStart(3, '0')}`;
+    const year = todayISO().slice(0, 4);
+    const seqs = invoices
+      .map((i) => String(i.number || ''))
+      .filter((n) => n.startsWith(`INV-${year}-`))
+      .map((n) => parseInt(n.split('-')[2], 10) || 0);
+    const invNumber = `INV-${year}-${String((seqs.length ? Math.max(...seqs) : 0) + 1).padStart(3, '0')}`;
 
     try {
       await api.post('/invoices', {

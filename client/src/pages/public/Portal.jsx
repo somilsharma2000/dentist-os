@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
-import { formatDate, formatINR } from '../../lib/utils';
+import { formatDate, formatINR, todayISO } from '../../lib/utils';
 import {
   Button,
   Card,
@@ -99,7 +99,7 @@ export default function Portal() {
   // LOGGED IN VIEW
   if (portalData) {
     const { patient, appointments = [], treatmentPlans = [], invoices = [], recalls = [] } = portalData;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayISO();
     const upcoming = appointments.filter((a) => a.date >= today).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
     const past = appointments.filter((a) => a.date < today).sort((a, b) => b.date.localeCompare(a.date));
     const nextRecall = recalls.slice().sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''))[0] || null;

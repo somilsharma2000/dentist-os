@@ -40,10 +40,59 @@ function nextId() {
   return db.nextId;
 }
 
+// IST date regardless of the visitor's own timezone.
+const istFmt = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
+});
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 function todayISO() {
-  const now = new Date();
-  const ist = new Date(now.getTime() + (now.getTimezoneOffset() + 330) * 60000);
-  return ist.toISOString().slice(0, 10);
+  return istFmt.format(new Date()); // YYYY-MM-DD
+}
+
+function istDaysAgo(n) {
+  const [y, m, d] = todayISO().split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d - n)).toISOString().slice(0, 10);
+}
+
+function lastMonths(count) {
+  const [y, m] = todayISO().split('-').map(Number);
+  const out = [];
+  for (let i = count - 1; i >= 0; i--) {
+    const dt = new Date(Date.UTC(y, m - 1 - i, 1));
+    out.push({ key: dt.toISOString().slice(0, 7), label: MONTH_NAMES[dt.getUTCMonth()] });
+  }
+  return out;
+}
+
+function isIsoDate(x) {
+  return typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x) && !isNaN(new Date(x + 'T00:00:00Z'));
+}
+
+function normalizePhone(raw) {
+  const digits = String(raw || '').replace(/[^0-9]/g, '');
+  const ten = digits.length > 10 ? digits.slice(-10) : digits;
+  return /^[6-9][0-9]{9}$/.test(ten) ? ten : null;
+}
+
+const BOOKING_SLOTS = ['09:00', '09:45', '10:30', '11:15', '12:00', '14:00', '14:45', '15:30', '16:15', '17:00', '17:45'];
+const TOOTH_STATES = new Set(['healthy', 'filled', 'crowned', 'rootcanal', 'implant', 'extracted']);
+const INACTIVE_APPT = new Set(['cancelled', 'no-show', 'no show']);
+const PROTECTED_FIELDS = ['id', 'created_date', 'created_by', 'tenantId'];
+
+function sanitizeBody(body, opts = {}) {
+  const out = { ...(body || {}) };
+  PROTECTED_FIELDS.forEach((f) => delete out[f]);
+  if (opts.allowTenantId) out.tenantId = (body || {}).tenantId;
+  return out;
+}
+
+function slotOpen(date, time, dentistId) {
+  return !sc(db.appointments, PUBLIC_TENANT).some((a) =>
+    a.date === date && a.time === time
+    && !INACTIVE_APPT.has(String(a.status || '').toLowerCase())
+    && (a.dentistId == null || dentistId == null || String(a.dentistId) === String(dentistId))
+  );
 }
 
 function err(status, message) {
@@ -95,7 +144,7 @@ function tid() {
 function sc(arr, t) {
   const active = t === undefined ? tid() : t;
   if (active === null) return arr;
-  return arr.filter((x) => !x.tenantId || String(x.tenantId) === String(active));
+  return arr.filter((x) => String(x.tenantId || PUBLIC_TENANT) === String(active));
 }
 
 function stripSecrets(user) {
@@ -108,7 +157,7 @@ function login(body) {
   const user = db.staff.find(
     (u) => String(u.email).toLowerCase() === String(email || '').trim().toLowerCase()
   );
-  if (!user || user.password !== password) throw err(401, 'Invalid email or password.');
+  if (!user || !password || user.password !== password) throw err(401, 'Invalid email or password.');
   const tenant = db.tenants.find((t) => t.id === user.tenantId) || null;
   return { staff: stripSecrets(user), tenant };
 }
@@ -131,14 +180,15 @@ function getDashboard() {
 
   const appointmentsToday = S(db.appointments)
     .filter((a) => a.date === today)
-    .sort((a, b) => a.time.localeCompare(b.time))
+    .sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')))
     .map((a) => ({ ...a, patientName: pName(a.patientId, t), dentistName: dName(a.dentistId, t) }));
 
+  const isPaid = (i) => String(i.status || '').toLowerCase() === 'paid';
   const revenueThisMonth = S(db.invoices)
-    .filter((i) => i.status === 'Paid' && String(i.date).startsWith(month))
+    .filter((i) => isPaid(i) && String(i.date || '').startsWith(month))
     .reduce((s, i) => s + (i.amount || 0), 0);
 
-  const pendingInvoices = S(db.invoices).filter((i) => i.status === 'Pending');
+  const pendingInvoices = S(db.invoices).filter((i) => String(i.status || '').toLowerCase() === 'pending');
 
   const goals = [
     { key: 'revenue', label: 'Revenue', current: revenueThisMonth + ((tenantSettings(t).monthly || {}).revenue || 0), target: (tenantSettings(t).goals || {}).revenue, unit: '₹' },
@@ -148,22 +198,16 @@ function getDashboard() {
   ];
 
   const trend = {};
-  const now = new Date();
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getTime() + (now.getTimezoneOffset() + 330) * 60000 - i * 30 * 86400000);
-    trend[d.toISOString().slice(0, 7)] = 0;
-  }
+  lastMonths(6).forEach((m) => { trend[m.key] = 0; });
   S(db.invoices)
-    .filter((i) => i.status === 'Paid')
+    .filter((i) => isPaid(i))
     .forEach((i) => {
-      if (trend[i.date.slice(0, 7)] !== undefined) trend[i.date.slice(0, 7)] += i.amount || 0;
+      const k = String(i.date || '').slice(0, 7);
+      if (trend[k] !== undefined) trend[k] += i.amount || 0;
     });
-  const revenueTrend = Object.entries(trend).map(([m, total]) => ({
-    month: new Date(m + '-01').toLocaleDateString('en-IN', { month: 'short' }),
-    total
-  }));
+  const revenueTrend = lastMonths(6).map((m) => ({ month: m.label, total: trend[m.key] }));
 
-  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  const weekAgo = istDaysAgo(7);
   const newLeads = S(db.leads).filter((l) => (l.created_date || '') >= weekAgo);
   const converted = S(db.leads).filter((l) => l.status === 'Converted').length;
 
@@ -179,7 +223,7 @@ function getDashboard() {
     dailySummary: {
       date: today,
       revenueToday: S(db.invoices)
-        .filter((i) => i.status === 'Paid' && i.date === today)
+        .filter((i) => isPaid(i) && i.date === today)
         .reduce((s, i) => s + (i.amount || 0), 0),
       completedVisits: appointmentsToday.filter((a) => a.status === 'Completed').length,
       appointmentsToday: appointmentsToday.length
@@ -205,11 +249,14 @@ function getDashboard() {
 function getSlots(params) {
   const date = params.get('date');
   const dentistId = params.get('dentistId');
+  if (!isIsoDate(date)) throw err(400, 'Invalid date. Use YYYY-MM-DD.');
   const booked = sc(db.appointments, PUBLIC_TENANT)
-    .filter((a) => a.date === date && (!dentistId || String(a.dentistId) === String(dentistId)))
+    .filter((a) =>
+      a.date === date
+      && !INACTIVE_APPT.has(String(a.status || '').toLowerCase())
+      && (!dentistId || String(a.dentistId) === String(dentistId) || a.dentistId == null))
     .map((a) => a.time);
-  const all = ['09:00', '09:45', '10:30', '11:15', '12:00', '14:00', '14:45', '15:30', '16:15', '17:00', '17:45'];
-  return all.map((t) => ({ time: t, available: !booked.includes(t) }));
+  return BOOKING_SLOTS.map((t) => ({ time: t, available: !booked.includes(t) }));
 }
 
 function createBooking(body) {
@@ -217,19 +264,33 @@ function createBooking(body) {
   if (!name || !phone || !date || !time || !service) {
     throw err(400, 'Missing required booking details.');
   }
+  if (!isIsoDate(date)) throw err(400, 'Invalid date format. Use YYYY-MM-DD.');
+  if (date < todayISO()) throw err(400, 'Please pick today or a future date.');
+  if (!BOOKING_SLOTS.includes(time)) throw err(400, 'Invalid time slot.');
+  const normalizedPhone = normalizePhone(phone);
+  if (!normalizedPhone) throw err(400, 'Please enter a valid 10-digit Indian mobile number.');
+  let dentist = null;
+  if (dentistId !== undefined && dentistId !== null && dentistId !== '') {
+    dentist = sc(db.dentists, PUBLIC_TENANT).find((d) => String(d.id) === String(dentistId));
+    if (!dentist) throw err(400, 'Selected dentist is not available.');
+  }
+  if (!slotOpen(date, time, dentist ? dentist.id : null)) {
+    throw err(409, 'That slot has just been booked. Please pick another time.');
+  }
   const pool = sc(db.patients, PUBLIC_TENANT);
-  let patient = pool.find((p) => p.phone === String(phone).trim());
+  let patient = pool.find((p) => p.phone === normalizedPhone);
   const isNew = !patient;
   if (!patient) {
     patient = {
-      id: nextId(), tenantId: PUBLIC_TENANT, name, phone: String(phone).trim(), email: email || '',
-      age: null, gender: '', lastVisit: date, status: 'Active', notes: notes || ''
+      id: nextId(), tenantId: PUBLIC_TENANT, name: String(name).slice(0, 80), phone: normalizedPhone,
+      email: String(email || '').slice(0, 120),
+      age: null, gender: '', lastVisit: date, status: 'Active', notes: String(notes || '').slice(0, 500)
     };
     db.patients.push(patient);
   }
   const appt = {
-    id: nextId(), tenantId: PUBLIC_TENANT, patientId: patient.id, dentistId: dentistId ? Number(dentistId) : null,
-    date, time, type: 'checkup', procedure: service, fee: 0, status: 'Scheduled'
+    id: nextId(), tenantId: PUBLIC_TENANT, patientId: patient.id, dentistId: dentist ? dentist.id : null,
+    date, time, type: 'checkup', procedure: String(service).slice(0, 120), fee: 0, status: 'Scheduled'
   };
   db.appointments.push(appt);
   persist();
@@ -241,8 +302,11 @@ function publicReview(body) {
   if (!name || !rating || !text) {
     throw err(400, 'Name, rating and review text are required.');
   }
+  const r = Number(rating);
+  if (!Number.isInteger(r) || r < 1 || r > 5) throw err(400, 'Rating must be between 1 and 5.');
   const review = {
-    id: nextId(), tenantId: PUBLIC_TENANT, name, phone: phone || '', rating: Number(rating), text,
+    id: nextId(), tenantId: PUBLIC_TENANT, name: String(name).slice(0, 80),
+    phone: phone ? String(phone).slice(0, 15) : '', rating: r, text: String(text).slice(0, 2000),
     source: 'Website', status: 'pending', date: todayISO(), response: '',
     created_date: new Date().toISOString()
   };
@@ -252,11 +316,15 @@ function publicReview(body) {
 }
 
 function portalLogin(body) {
+  const rawPhone = String((body || {}).phone || '').trim();
+  const normalizedPhone = normalizePhone(rawPhone);
   const patient = sc(db.patients, PUBLIC_TENANT)
-    .find((p) => p.phone === String((body || {}).phone || '').trim());
+    .find((p) => p.phone === rawPhone || (normalizedPhone && p.phone === normalizedPhone));
   if (!patient) throw err(404, 'No account found with this phone number. Please register.');
+  // Clinical notes are internal — do not expose them through the portal.
+  const { notes, ...safePatient } = patient;
   return {
-    patient: clone(patient),
+    patient: clone(safePatient),
     appointments: sc(db.appointments, PUBLIC_TENANT)
       .filter((a) => a.patientId === patient.id)
       .map((a) => ({ ...a, dentistName: dName(a.dentistId, PUBLIC_TENANT) })),
@@ -269,12 +337,16 @@ function portalLogin(body) {
 function portalRegister(body) {
   const { name, phone, email, age, gender } = body;
   if (!name || !phone) throw err(400, 'Name and phone are required.');
-  if (sc(db.patients, PUBLIC_TENANT).find((p) => p.phone === String(phone).trim())) {
+  const normalizedPhone = normalizePhone(phone);
+  if (!normalizedPhone) throw err(400, 'Please enter a valid 10-digit Indian mobile number.');
+  if (sc(db.patients, PUBLIC_TENANT).find((p) => p.phone === normalizedPhone)) {
     throw err(409, 'An account already exists with this phone number. Please log in.');
   }
   const patient = {
-    id: nextId(), tenantId: PUBLIC_TENANT, name, phone: String(phone).trim(), email: email || '',
-    age: age || null, gender: gender || '', lastVisit: todayISO(), status: 'Active', notes: ''
+    id: nextId(), tenantId: PUBLIC_TENANT, name: String(name).slice(0, 80), phone: normalizedPhone,
+    email: String(email || '').slice(0, 120),
+    age: age === undefined || age === null || age === '' ? null : Number(age) || null,
+    gender: gender || '', lastVisit: todayISO(), status: 'Active', notes: ''
   };
   db.patients.push(patient);
   persist();
@@ -359,12 +431,16 @@ function routePost(path, body) {
 
   const parts = path.split('/').filter(Boolean);
   if (parts.length === 1 && TABLES.includes(parts[0])) {
-    staff();
+    const st = staff();
+    if (SUPER_TABLES.has(parts[0])) requireSuper();
+    if (TENANT_TABLES.has(parts[0]) && tid() === null) {
+      throw err(400, 'Pick a clinic first.');
+    }
+    const allowTenantId = st.staff.role === 'super';
     const item = {
       id: nextId(), created_date: new Date().toISOString(),
-      ...(TENANT_TABLES.has(parts[0]) && tid() ? { tenantId: tid() } : {}),
-      ...(tid() === null && TENANT_TABLES.has(parts[0]) ? { tenantId: PUBLIC_TENANT } : {}),
-      ...(body || {})
+      ...(TENANT_TABLES.has(parts[0]) ? { tenantId: tid() || PUBLIC_TENANT } : {}),
+      ...sanitizeBody(body, { allowTenantId })
     };
     db[parts[0]].push(item);
     persist();
@@ -392,9 +468,14 @@ function routePut(path, body) {
   }
   if (parts.length === 2 && parts[0] === 'tooth-chart') {
     staff();
+    const tooth = Number(parts[1]);
+    const state = (body || {}).state;
+    const q = Math.floor(tooth / 10); const u = tooth % 10;
+    if (!Number.isInteger(tooth) || q < 1 || q > 8 || u < 1 || u > 8) throw err(400, 'Invalid tooth number.');
+    if (!TOOTH_STATES.has(state)) throw err(400, 'Invalid tooth state.');
     db.toothChartStates = db.toothChartStates || [];
     const scoped = sc(db.toothChartStates);
-    const existing = scoped.find((t) => t.tooth === Number(parts[1]));
+    const existing = scoped.find((t) => t.tooth === tooth);
     if (existing) existing.state = (body || {}).state;
     else db.toothChartStates.push({ tenantId: tid() || PUBLIC_TENANT, tooth: Number(parts[1]), state: (body || {}).state });
     persist();
@@ -428,10 +509,17 @@ function routePut(path, body) {
     const i = arr.findIndex((x) => String(x.id) === parts[1]);
     if (i < 0) throw err(404, 'Not found');
     const t = tid();
-    if (t !== null && arr[i].tenantId && String(arr[i].tenantId) !== String(t)) {
+    if (t !== null && String(arr[i].tenantId || PUBLIC_TENANT) !== String(t)) {
       throw err(403, 'This record belongs to another clinic.');
     }
-    arr[i] = { ...arr[i], ...(body || {}) };
+    const st = staff();
+    const patch = sanitizeBody(body, { allowTenantId: st.staff.role === 'super' });
+    if (parts[0] === 'invoices' && patch.amount !== undefined) {
+      const amt = Number(patch.amount);
+      if (!Number.isFinite(amt) || amt < 0) throw err(400, 'Invalid invoice amount.');
+      patch.amount = amt;
+    }
+    arr[i] = { ...arr[i], ...patch };
     persist();
     return clone(parts[0] === 'staff' ? stripSecrets(arr[i]) : arr[i]);
   }
@@ -448,7 +536,7 @@ function routeDel(path) {
     if (i < 0) throw err(404, 'Not found');
     const item = full[i];
     const t = tid();
-    if (t !== null && item.tenantId && String(item.tenantId) !== String(t)) {
+    if (t !== null && String(item.tenantId || PUBLIC_TENANT) !== String(t)) {
       throw err(403, 'This record belongs to another clinic.');
     }
     full.splice(i, 1);
