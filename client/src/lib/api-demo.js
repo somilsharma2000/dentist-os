@@ -289,6 +289,23 @@ function routeGet(path) {
     staff();
     return clone(getDashboard());
   }
+  if (p === '/integrations') {
+    const st = staff();
+    const t = tid();
+    if (t === null) {
+      // Super admin viewing "all clinics" → return every clinic's connector config
+      return clone(
+        db.tenants.map((tn) => ({
+          id: tn.id,
+          name: tn.name,
+          integrations: tn.integrations || {}
+        }))
+      );
+    }
+    const tn = db.tenants.find((x) => String(x.id) === String(t));
+    if (!tn) throw err(404, 'Clinic not found.');
+    return clone({ id: tn.id, name: tn.name, integrations: tn.integrations || {} });
+  }
   if (p === '/settings') return clone(db.settings); // public site content (tenant 1)
   if (p === '/tooth-chart') {
     staff();
@@ -309,6 +326,7 @@ function routeGet(path) {
     if (table === 'tenants') return clone(db.tenants);
     return clone(sc(db[table]));
   }
+
   if (parts.length === 2 && TABLES.includes(parts[0])) {
     staff();
     const list = sc(db[parts[0]]);
@@ -362,6 +380,25 @@ function routePut(path, body) {
     persist();
     return clone(sc(db.toothChartStates));
   }
+  if (path === '/integrations') {
+    const st = staff();
+    const { tenantId, key, config, disconnect } = body || {};
+    if (!key) throw err(400, 'Missing connector key.');
+    const targetId = tenantId !== undefined ? tenantId : tid();
+    if (targetId === null) throw err(400, 'Pick a clinic first.');
+    // Super may configure any clinic; clinic admins only their own.
+    if (st.staff.role !== 'super' && String(st.staff.tenantId) !== String(targetId)) {
+      throw err(403, 'You can only configure connectors for your own clinic.');
+    }
+    const tn = db.tenants.find((x) => String(x.id) === String(targetId));
+    if (!tn) throw err(404, 'Clinic not found.');
+    tn.integrations = tn.integrations || {};
+    if (disconnect) delete tn.integrations[key];
+    else tn.integrations[key] = { status: 'configured', config: config || {}, connectedAt: todayISO() };
+    persist();
+    return clone({ ok: true, integrations: tn.integrations });
+  }
+
   if (parts.length === 2 && TABLES.includes(parts[0])) {
     staff();
     if (parts[0] === 'staff') requireSuper();

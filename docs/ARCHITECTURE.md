@@ -129,3 +129,5 @@ Server deployment target: Render/Railway with `start` script; JSON DB on persist
 **White-label:** `tenant.brandColor` is an HSL triple applied to the shadcn `--primary` token on admin login and tenant switch.
 
 **Unauthenticated reads:** only `dentists`, `reviews` (published only) and `settings` are public; everything else returns 401.
+
+- **Integrations** (`/admin/integrations`): per-clinic connector credentials — schema in INTEGRATIONS.md.

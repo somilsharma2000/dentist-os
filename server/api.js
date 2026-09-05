@@ -100,6 +100,38 @@ router.put('/auth/view-tenant', (req, res) => {
   res.json({ ok: true, viewTenantId: s.viewTenantId });
 });
 
+// ---- Integrations hub (per-clinic connector credentials) ----
+router.get('/integrations', (req, res) => {
+  const s = staff(req);
+  if (!s) return res.status(401).json({ error: 'Please sign in.' });
+  const t = tid(req);
+  if (t === null) {
+    return res.json(db.tenants.map((tn) => ({ id: tn.id, name: tn.name, integrations: tn.integrations || {} })));
+  }
+  const tn = db.tenants.find((x) => String(x.id) === String(t));
+  if (!tn) return res.status(404).json({ error: 'Clinic not found.' });
+  res.json({ id: tn.id, name: tn.name, integrations: tn.integrations || {} });
+});
+
+router.put('/integrations', (req, res) => {
+  const s = staff(req);
+  if (!s) return res.status(401).json({ error: 'Please sign in.' });
+  const { tenantId, key, config, disconnect } = req.body || {};
+  if (!key) return res.status(400).json({ error: 'Missing connector key.' });
+  const targetId = tenantId !== undefined ? tenantId : tid(req);
+  if (targetId === null) return res.status(400).json({ error: 'Pick a clinic first.' });
+  if (s.staff.role !== 'super' && String(s.staff.tenantId) !== String(targetId)) {
+    return res.status(403).json({ error: 'You can only configure connectors for your own clinic.' });
+  }
+  const tn = db.tenants.find((x) => String(x.id) === String(targetId));
+  if (!tn) return res.status(404).json({ error: 'Clinic not found.' });
+  tn.integrations = tn.integrations || {};
+  if (disconnect) delete tn.integrations[key];
+  else tn.integrations[key] = { status: 'configured', config: config || {}, connectedAt: istToday() };
+  db.save();
+  res.json({ ok: true, integrations: tn.integrations });
+});
+
 // ---- Generic CRUD (tenant-scoped) ----
 TABLES.forEach((t) => {
   router.get('/' + t, (req, res) => {

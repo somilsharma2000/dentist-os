@@ -67,6 +67,8 @@ Tasks, Inventory, Automations (rule engine UI), AI Assistant, WhatsApp inbox UI,
 - ✅ (Sep 6) Staff login discoverable: "Staff Login" link in public header + footer → /admin-login
 - ✅ (Sep 6) Real notifications bell in admin header (tasks + low stock + pending invoices, click-through to module); fake search box removed — no dead UI controls remain
 - ✅ (Sep 6) CRITICAL FIX: tenant-scoped PUT mutated a filtered copy instead of the real record — every staff edit (Mark Paid, Publish review, patient edits…) silently failed for non-super roles. Fixed in api-demo.js (mutate original array after tenant check); server version was already correct. Live-verified: Mark Paid + review publish both persist now.
+- ✅ (Sep 6) Integrations hub built & live-verified: /admin/integrations — 6 connectors (WhatsApp, SMS, Razorpay, Google Calendar, SMTP, Google Reviews) with per-clinic credential storage; super admin clinic switcher; schema documented in docs/INTEGRATIONS.md. Fixed en-route bug: PUT /integrations handler was mis-inserted in routeGet (save failed 404) — moved into routePut, E2E verified CityDent WhatsApp save + persistence across reload.
+- ✅ (Sep 6) Audit sweep: nav↔route parity CLEAN, admin pages all wired, client API↔api-demo↔server parity CLEAN (incl. /integrations, /dashboard, /settings, portal, booking routes).
 - ⬜ Hardening: password hashing + JWT, per-tenant settings (dashboard goals still global), staff CRUD UI in admin
 - ⬜ Postgres migration for production DB (Phase 9+ prerequisite for scale)
 

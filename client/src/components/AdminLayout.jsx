@@ -47,6 +47,7 @@ const groups = [
     label: 'SYSTEM',
     items: [
       { to: '/admin/inventory', label: 'Inventory', roles: ['admin', 'dentist'] },
+      { to: '/admin/integrations', label: 'Integrations', roles: ['admin', 'super'] },
       { to: '/admin/settings', label: 'Settings', roles: ['admin'] }
     ]
   },

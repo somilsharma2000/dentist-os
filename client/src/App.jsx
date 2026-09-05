@@ -29,6 +29,7 @@ import WhatsApp from './pages/admin/WhatsApp.jsx';
 import QrCodes from './pages/admin/QrCodes.jsx';
 import Inventory from './pages/admin/Inventory.jsx';
 import Settings from './pages/admin/Settings.jsx';
+import Integrations from './pages/admin/Integrations.jsx';
 import Agency from './pages/admin/Agency.jsx';
 import WebsiteMgr from './pages/admin/WebsiteMgr.jsx';
 
@@ -70,6 +71,7 @@ export default function App() {
         <Route path="qr-codes" element={<QrCodes />} />
         <Route path="inventory" element={<Inventory />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="integrations" element={<Integrations />} />
         <Route path="agency" element={<Agency />} />
         <Route path="website" element={<WebsiteMgr />} />
       </Route>
