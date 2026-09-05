@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import { formatDate, formatINR, todayISO, next7Days } from '../../lib/utils';
 import { Button, Card, Avatar, Input, Textarea, Badge } from '../../components/ui';
 import { CheckCircle2, Calendar, Clock, User, UserCheck, Stethoscope, ChevronRight, ChevronLeft } from 'lucide-react';
+import { getServiceIcon } from '../../lib/serviceIcons';
 
 const STEPS = [
   { id: 1, name: 'Service' },
@@ -298,6 +299,7 @@ export default function Book() {
             <div className="grid gap-4 sm:grid-cols-2">
               {services.map((srv, idx) => {
                 const isSelected = selectedServices.some((x) => x.name === srv.name);
+                const Icon = getServiceIcon(srv.name);
                 return (
                   <div
                     key={idx}
@@ -313,14 +315,21 @@ export default function Book() {
                       isSelected ? 'ring-2 ring-primary border-primary bg-primary/5' : 'bg-card'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-bold text-base">{srv.name}</h3>
-                      <span className="flex items-center gap-1.5 font-semibold text-sm text-primary">
-                        {isSelected && <CheckCircle2 className="h-4 w-4" />}
-                        {formatINR(srv.price)}
-                      </span>
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-full bg-primary/10 p-2 text-primary shrink-0">
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="font-bold text-base">{srv.name}</h3>
+                          <span className="flex items-center gap-1.5 font-semibold text-sm text-primary shrink-0">
+                            {isSelected && <CheckCircle2 className="h-4 w-4" />}
+                            {formatINR(srv.price)}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{srv.desc}</p>
+                      </div>
                     </div>
-                    <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{srv.desc}</p>
                   </div>
                 );
               })}
