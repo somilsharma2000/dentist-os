@@ -36,6 +36,13 @@ export default function PublicLayout() {
           </nav>
           <div className="flex items-center gap-2">
             <Link
+              to="/admin-login"
+              className="hidden rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-primary sm:block"
+              title="Staff sign in"
+            >
+              Staff Login
+            </Link>
+            <Link
               to="/portal"
               className="hidden rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-muted sm:block"
             >
@@ -83,6 +90,7 @@ export default function PublicLayout() {
               <li><Link className="hover:text-primary" to="/reviews">Reviews</Link></li>
               <li><Link className="hover:text-primary" to="/portal">Patient Portal</Link></li>
               <li><Link className="hover:text-primary" to="/contact">Contact</Link></li>
+              <li><Link className="hover:text-primary" to="/admin-login">Staff Login</Link></li>
             </ul>
           </div>
           <div>

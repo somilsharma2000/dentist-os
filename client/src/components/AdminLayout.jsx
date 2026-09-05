@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
-import { HeartPulse, Search, Bell, LogOut, Building2 } from 'lucide-react';
+import { HeartPulse, Bell, LogOut, Building2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { getSession, clearSession, updateSession, applyTenantTheme, ROLE_LABELS } from '../lib/auth';
 
@@ -63,6 +63,8 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const [session, setSessionState] = useState(getSession());
   const [tenants, setTenants] = useState([]);
+  const [dash, setDash] = useState(null);
+  const [bellOpen, setBellOpen] = useState(false);
 
   const isSuper = session?.staff?.role === 'super';
   const role = session?.staff?.role || 'admin';
@@ -83,7 +85,28 @@ export default function AdminLayout() {
         .then(setTenants)
         .catch(() => {});
     }
+    api
+      .get('/dashboard')
+      .then(setDash)
+      .catch(() => {});
   }, [isSuper]);
+
+  const notes = [];
+  if (dash) {
+    (dash.tasks || []).slice(0, 4).forEach((t) =>
+      notes.push({ icon: '📋', label: t.title || 'Pending task', to: '/admin/tasks' })
+    );
+    (dash.lowStock || []).slice(0, 3).forEach((i) =>
+      notes.push({ icon: '📦', label: `Low stock: ${i.item} (${i.quantity} ${i.unit} left)`, to: '/admin/inventory' })
+    );
+    if (dash.pendingInvoicesCount > 0) {
+      notes.push({
+        icon: '🧾',
+        label: `${dash.pendingInvoicesCount} pending invoice${dash.pendingInvoicesCount > 1 ? 's' : ''} · ₹${dash.pendingInvoicesAmount.toLocaleString('en-IN')}`,
+        to: '/admin/invoices'
+      });
+    }
+  }
 
   const logout = () => {
     clearSession();
@@ -151,10 +174,7 @@ export default function AdminLayout() {
 
       <div className="ml-60 flex min-h-screen flex-1 flex-col bg-muted/30">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-6">
-          <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground">
-            <Search className="h-4 w-4" />
-            <span>Search…</span>
-          </div>
+          <p className="text-sm font-medium text-muted-foreground">{activeTenant}</p>
           <div className="flex items-center gap-4">
             {isSuper && (
               <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1.5 text-sm">
@@ -173,7 +193,39 @@ export default function AdminLayout() {
                 </select>
               </div>
             )}
-            <Bell className="h-5 w-5 text-muted-foreground" />
+            <div className="relative">
+              <button
+                onClick={() => setBellOpen((o) => !o)}
+                title="Notifications"
+                className="relative rounded-md border p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <Bell className="h-4 w-4" />
+                {notes.length > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+                    {notes.length}
+                  </span>
+                )}
+              </button>
+              {bellOpen && (
+                <div className="absolute right-0 top-11 z-50 w-80 rounded-lg border bg-popover p-2 shadow-lg">
+                  {notes.length === 0 ? (
+                    <p className="px-3 py-4 text-center text-sm text-muted-foreground">All caught up 🎉</p>
+                  ) : (
+                    notes.map((n, i) => (
+                      <Link
+                        key={i}
+                        to={n.to}
+                        onClick={() => setBellOpen(false)}
+                        className="flex items-start gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+                      >
+                        <span>{n.icon}</span>
+                        <span className="flex-1">{n.label}</span>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                 {(session?.staff?.name || 'A').slice(0, 1)}

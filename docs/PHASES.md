@@ -64,6 +64,9 @@ Tasks, Inventory, Automations (rule engine UI), AI Assistant, WhatsApp inbox UI,
 - ✅ Agency owner: sees all clinics aggregated + tenant switcher (All clinics / per-clinic) + Agency Mgmt module
 - ✅ Server parity: server/api.js mirrors the demo shim (token sessions, same scoping); seed unified via demoData.json
 - ✅ Live-verified: login redirect, role nav, isolation (CityDent sees only its patient), theme colors, tenant switcher, aggregated dashboard
+- ✅ (Sep 6) Staff login discoverable: "Staff Login" link in public header + footer → /admin-login
+- ✅ (Sep 6) Real notifications bell in admin header (tasks + low stock + pending invoices, click-through to module); fake search box removed — no dead UI controls remain
+- ✅ (Sep 6) CRITICAL FIX: tenant-scoped PUT mutated a filtered copy instead of the real record — every staff edit (Mark Paid, Publish review, patient edits…) silently failed for non-super roles. Fixed in api-demo.js (mutate original array after tenant check); server version was already correct. Live-verified: Mark Paid + review publish both persist now.
 - ⬜ Hardening: password hashing + JWT, per-tenant settings (dashboard goals still global), staff CRUD UI in admin
 - ⬜ Postgres migration for production DB (Phase 9+ prerequisite for scale)
 

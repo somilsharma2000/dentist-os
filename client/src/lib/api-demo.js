@@ -365,9 +365,15 @@ function routePut(path, body) {
   if (parts.length === 2 && TABLES.includes(parts[0])) {
     staff();
     if (parts[0] === 'staff') requireSuper();
-    const arr = parts[0] === 'tenants' ? db.tenants : sc(db[parts[0]]);
+    // Mutate the ORIGINAL array (a tenant-scoped view is a filtered copy),
+    // but first verify the record belongs to the active clinic.
+    const arr = db[parts[0]];
     const i = arr.findIndex((x) => String(x.id) === parts[1]);
     if (i < 0) throw err(404, 'Not found');
+    const t = tid();
+    if (t !== null && arr[i].tenantId && String(arr[i].tenantId) !== String(t)) {
+      throw err(403, 'This record belongs to another clinic.');
+    }
     arr[i] = { ...arr[i], ...(body || {}) };
     persist();
     return clone(parts[0] === 'staff' ? stripSecrets(arr[i]) : arr[i]);
