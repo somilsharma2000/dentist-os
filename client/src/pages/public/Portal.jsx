@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { formatDate, formatINR } from '../../lib/utils';
 import {
@@ -14,9 +15,10 @@ import {
   Avatar,
   EmptyState
 } from '../../components/ui';
-import { LogOut, Calendar, FileText, Receipt, User } from 'lucide-react';
+import { LogOut, Calendar, FileText, Receipt, User, Bell, Phone, ArrowRight } from 'lucide-react';
 
 export default function Portal() {
+  const navigate = useNavigate();
   const [phone, setPhone] = useState('');
   const [loginError, setLoginError] = useState('');
   const [showRegister, setShowRegister] = useState(false);
@@ -96,7 +98,11 @@ export default function Portal() {
 
   // LOGGED IN VIEW
   if (portalData) {
-    const { patient, appointments = [], treatmentPlans = [], invoices = [] } = portalData;
+    const { patient, appointments = [], treatmentPlans = [], invoices = [], recalls = [] } = portalData;
+    const today = new Date().toISOString().slice(0, 10);
+    const upcoming = appointments.filter((a) => a.date >= today).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    const past = appointments.filter((a) => a.date < today).sort((a, b) => b.date.localeCompare(a.date));
+    const nextRecall = recalls.slice().sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''))[0] || null;
 
     return (
       <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">
@@ -109,10 +115,50 @@ export default function Portal() {
               <p className="text-sm text-muted-foreground">{patient?.phone} {patient?.email ? `• ${patient.email}` : ''}</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => navigate('/book')} className="gap-2">
+              Book Appointment <ArrowRight className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+          </div>
+        </div>
+
+        {/* Profile & Recall summary */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="p-4 space-y-2">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <User className="h-4 w-4" /> <span className="text-xs font-semibold uppercase tracking-wide">My Profile</span>
+            </div>
+            <p className="text-sm"><span className="text-muted-foreground">Age:</span> {patient?.age || '—'}</p>
+            <p className="text-sm"><span className="text-muted-foreground">Gender:</span> {patient?.gender || '—'}</p>
+            <p className="text-sm"><span className="text-muted-foreground">Patient since:</span> {patient?.createdDate || patient?.firstVisit ? formatDate(patient.createdDate || patient.firstVisit) : '—'}</p>
+          </Card>
+          {nextRecall ? (
+            <Card className="p-4 space-y-2">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Bell className="h-4 w-4" /> <span className="text-xs font-semibold uppercase tracking-wide">Next Checkup Due</span>
+              </div>
+              <p className="text-sm font-semibold">{formatDate(nextRecall.dueDate)}</p>
+              <p className="text-xs text-muted-foreground">{nextRecall.type || nextRecall.reason || 'Routine checkup & cleaning'}</p>
+            </Card>
+          ) : (
+            <Card className="p-4 space-y-2">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Bell className="h-4 w-4" /> <span className="text-xs font-semibold uppercase tracking-wide">Checkup Reminder</span>
+              </div>
+              <p className="text-xs text-muted-foreground">We'll remind you when your next routine checkup is due.</p>
+            </Card>
+          )}
+          <Card className="p-4 space-y-2">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Phone className="h-4 w-4" /> <span className="text-xs font-semibold uppercase tracking-wide">Need to Reschedule?</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Call the clinic and we'll move your appointment for you.</p>
+            <p className="text-sm font-semibold">+91 98765 43210</p>
+          </Card>
         </div>
 
         {/* Section 1: My Appointments */}
@@ -125,21 +171,49 @@ export default function Portal() {
           {appointments.length === 0 ? (
             <EmptyState title="No appointments found" subtitle="Book your first appointment online." />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {appointments.map((apt, idx) => (
-                <Card key={idx} className="p-4 flex flex-col justify-between space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold text-base">{apt.procedure}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Dentist: {apt.dentistName || 'SmileCraft Clinic'}</p>
+            <div className="space-y-5">
+            {upcoming.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Upcoming</p>
+                <div className="grid gap-4 md:grid-cols-2">
+                {upcoming.map((apt, idx) => (
+                  <Card key={'u' + idx} className="p-4 flex flex-col justify-between space-y-2 border-primary/40">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-base">{apt.procedure}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Dentist: {apt.dentistName || 'SmileCraft Clinic'}</p>
+                      </div>
+                      <Badge variant={statusVariant(apt.status)}>{apt.status}</Badge>
                     </div>
-                    <Badge variant={statusVariant(apt.status)}>{apt.status}</Badge>
-                  </div>
-                  <div className="text-xs font-medium text-muted-foreground pt-2 border-t border-border/60">
-                    {formatDate(apt.date)} • {apt.time}
-                  </div>
-                </Card>
-              ))}
+                    <div className="text-xs font-medium text-muted-foreground pt-2 border-t border-border/60">
+                      {formatDate(apt.date)} • {apt.time}
+                    </div>
+                  </Card>
+                ))}
+                </div>
+              </div>
+            )}
+            {past.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Past visits</p>
+                <div className="grid gap-4 md:grid-cols-2">
+                {past.map((apt, idx) => (
+                  <Card key={'p' + idx} className="p-4 flex flex-col justify-between space-y-2 opacity-80">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-base">{apt.procedure}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Dentist: {apt.dentistName || 'SmileCraft Clinic'}</p>
+                      </div>
+                      <Badge variant={statusVariant(apt.status)}>{apt.status}</Badge>
+                    </div>
+                    <div className="text-xs font-medium text-muted-foreground pt-2 border-t border-border/60">
+                      {formatDate(apt.date)} • {apt.time}
+                    </div>
+                  </Card>
+                ))}
+                </div>
+              </div>
+            )}
             </div>
           )}
         </div>

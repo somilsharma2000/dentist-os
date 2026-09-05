@@ -376,7 +376,8 @@ router.post('/portal/login', (req, res) => {
       .filter((a) => a.patientId === patient.id)
       .map((a) => ({ ...a, dentistName: dName(a.dentistId) })),
     treatmentPlans: sc(db.treatmentPlans, PUBLIC_TENANT).filter((tp) => tp.patientId === patient.id),
-    invoices: sc(db.invoices, PUBLIC_TENANT).filter((i) => i.patientId === patient.id)
+    invoices: sc(db.invoices, PUBLIC_TENANT).filter((i) => i.patientId === patient.id),
+    recalls: sc(db.recall || [], PUBLIC_TENANT).filter((r) => String(r.patientId) === String(patient.id) || r.phone === patient.phone)
   });
 });
 

@@ -256,7 +256,8 @@ function portalLogin(body) {
       .filter((a) => a.patientId === patient.id)
       .map((a) => ({ ...a, dentistName: dName(a.dentistId, PUBLIC_TENANT) })),
     treatmentPlans: clone(sc(db.treatmentPlans, PUBLIC_TENANT).filter((tp) => tp.patientId === patient.id)),
-    invoices: clone(sc(db.invoices, PUBLIC_TENANT).filter((i) => i.patientId === patient.id))
+    invoices: clone(sc(db.invoices, PUBLIC_TENANT).filter((i) => i.patientId === patient.id)),
+    recalls: clone(sc(db.recall || [], PUBLIC_TENANT).filter((r) => String(r.patientId) === String(patient.id) || r.phone === patient.phone))
   };
 }
 

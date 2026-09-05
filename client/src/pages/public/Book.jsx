@@ -23,7 +23,7 @@ export default function Book() {
   const [dentists, setDentists] = useState([]);
   const [slots, setSlots] = useState([]);
 
-  const [selectedService, setSelectedService] = useState(null); // { name, price, desc }
+  const [selectedServices, setSelectedServices] = useState([]); // [{ name, price, desc }] — multi-select
   const [selectedDentist, setSelectedDentist] = useState(null); // { id, name } or null (No Preference)
   const [dentistChoiceMade, setDentistChoiceMade] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
@@ -55,7 +55,7 @@ export default function Book() {
           const matched = settingsData.services.find(
             (s) => s.name.toLowerCase() === paramService.toLowerCase()
           );
-          if (matched) setSelectedService(matched);
+          if (matched) setSelectedServices([matched]);
         }
       }
       if (Array.isArray(dentistsData)) {
@@ -94,8 +94,8 @@ export default function Book() {
     setStepError('');
 
     if (step === 1) {
-      if (!selectedService) {
-        setStepError('Please select a service to continue.');
+      if (selectedServices.length === 0) {
+        setStepError('Please select at least one service to continue.');
         return;
       }
       setStep(2);
@@ -143,7 +143,7 @@ export default function Book() {
     try {
       setSubmitting(true);
       const res = await api.post('/bookings', {
-        service: selectedService.name,
+        service: selectedServices.map((x) => x.name).join(' + '),
         dentistId: selectedDentist?.id || null,
         date: selectedDate,
         time: selectedTime,
@@ -162,7 +162,7 @@ export default function Book() {
 
   const handleReset = () => {
     setStep(1);
-    setSelectedService(null);
+    setSelectedServices([]);
     setSelectedDentist(null);
     setDentistChoiceMade(false);
     setSelectedDate('');
@@ -193,9 +193,15 @@ export default function Book() {
           </div>
 
           <div className="w-full rounded-lg bg-muted/40 p-6 text-left space-y-3 text-sm">
+            <div className="py-1 border-b border-border/60">
+              <span className="text-muted-foreground">Service(s)</span>
+              <span className="font-semibold block mt-1 text-right">
+                {selectedServices.map((srv, i) => <span key={i} className="block">{srv.name}</span>)}
+              </span>
+            </div>
             <div className="flex justify-between py-1 border-b border-border/60">
-              <span className="text-muted-foreground">Service</span>
-              <span className="font-semibold">{selectedService?.name}</span>
+              <span className="text-muted-foreground">Payment</span>
+              <span className="font-semibold">Pay at clinic</span>
             </div>
             <div className="flex justify-between py-1 border-b border-border/60">
               <span className="text-muted-foreground">Dentist</span>
@@ -285,15 +291,22 @@ export default function Book() {
         {/* STEP 1: SERVICE */}
         {step === 1 && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold">Step 1: Select a Service</h2>
+            <h2 className="text-lg font-bold">Step 1: Select Services (you can pick more than one)</h2>
+            <p className="text-xs text-muted-foreground">
+              Tap to add or remove services — e.g. Cleaning + Filling in a single visit.
+            </p>
             <div className="grid gap-4 sm:grid-cols-2">
               {services.map((srv, idx) => {
-                const isSelected = selectedService?.name === srv.name;
+                const isSelected = selectedServices.some((x) => x.name === srv.name);
                 return (
                   <div
                     key={idx}
                     onClick={() => {
-                      setSelectedService(srv);
+                      setSelectedServices((prev) =>
+                        prev.some((x) => x.name === srv.name)
+                          ? prev.filter((x) => x.name !== srv.name)
+                          : [...prev, srv]
+                      );
                       setStepError('');
                     }}
                     className={`cursor-pointer rounded-lg border p-4 transition-all hover:border-primary/50 ${
@@ -302,13 +315,26 @@ export default function Book() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-bold text-base">{srv.name}</h3>
-                      <span className="font-semibold text-sm text-primary">{formatINR(srv.price)}</span>
+                      <span className="flex items-center gap-1.5 font-semibold text-sm text-primary">
+                        {isSelected && <CheckCircle2 className="h-4 w-4" />}
+                        {formatINR(srv.price)}
+                      </span>
                     </div>
                     <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{srv.desc}</p>
                   </div>
                 );
               })}
             </div>
+            {selectedServices.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+                <span className="font-semibold text-primary">
+                  {selectedServices.length} service{selectedServices.length > 1 ? 's' : ''} selected
+                </span>
+                <span className="font-bold">
+                  Estimated total: {formatINR(selectedServices.reduce((sum, x) => sum + x.price, 0))}
+                </span>
+              </div>
+            )}
           </div>
         )}
 
@@ -524,9 +550,20 @@ export default function Book() {
             <h2 className="text-lg font-bold text-center">Step 6: Review & Confirm</h2>
 
             <div className="rounded-lg border bg-muted/20 p-5 space-y-3 text-sm">
+              <div className="py-1 border-b border-border/60">
+                <span className="text-muted-foreground">Services</span>
+                <div className="mt-1 space-y-1 text-right">
+                  {selectedServices.map((srv, i) => (
+                    <p key={i} className="font-semibold">{srv.name} ({formatINR(srv.price)})</p>
+                  ))}
+                  <p className="font-bold text-primary">
+                    Total: {formatINR(selectedServices.reduce((sum, x) => sum + x.price, 0))}
+                  </p>
+                </div>
+              </div>
               <div className="flex justify-between py-1 border-b border-border/60">
-                <span className="text-muted-foreground">Service</span>
-                <span className="font-semibold">{selectedService?.name} ({formatINR(selectedService?.price)})</span>
+                <span className="text-muted-foreground">Payment</span>
+                <span className="font-semibold">Pay at the clinic — nothing to pay online now</span>
               </div>
               <div className="flex justify-between py-1 border-b border-border/60">
                 <span className="text-muted-foreground">Dentist</span>

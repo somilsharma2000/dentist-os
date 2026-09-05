@@ -60,8 +60,9 @@ export default function Home() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:py-10 space-y-12 md:space-y-16">
       {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-primary/10 via-primary/5 to-transparent px-6 py-12 md:py-20 text-center">
-        <div className="mx-auto max-w-3xl space-y-6">
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-primary/10 via-primary/5 to-transparent px-6 py-12 md:py-20">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
+        <div className="space-y-6 text-center md:text-left">
           <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary">
             <HeartPulse className="h-4 w-4" />
             SmileCraft Dental Clinic • Bengaluru
@@ -81,6 +82,12 @@ export default function Home() {
               Explore Services
             </Button>
           </div>
+        </div>
+          <img
+            src="https://media.base44.com/images/public/6a693c01172fbf5ddd0919ba/989fa81a1_generated_image.png"
+            alt="SmileCraft Dental Clinic reception — bright, modern, and welcoming"
+            className="mx-auto w-full max-w-md rounded-2xl shadow-lg object-cover"
+          />
         </div>
       </section>
 
@@ -145,6 +152,27 @@ export default function Home() {
         <div className="text-center space-y-2">
           <h2 className="text-2xl md:text-3xl font-bold">Why Choose Us</h2>
           <p className="text-sm text-muted-foreground">We prioritize your health, comfort, and peace of mind.</p>
+        </div>
+        <div className="grid items-center gap-8 md:grid-cols-2">
+          <img
+            src="https://media.base44.com/images/public/6a693c01172fbf5ddd0919ba/417f45335_generated_image.png"
+            alt="Our dentist in a modern, sterile treatment room"
+            className="w-full rounded-2xl shadow-md object-cover"
+          />
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold">Care that puts you first</h3>
+            <p className="text-sm text-muted-foreground">
+              From your first consultation to follow-up, our team explains every step, shows you the
+              plan and pricing upfront, and keeps your comfort at the centre of everything we do.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Hospital-grade sterilization, gentle techniques, and a calm, modern clinic — the reasons
+              families across Bengaluru trust us with their smiles.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => navigate('/team')}>
+              Meet Our Dentists <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {whyChooseUs.map((item, idx) => {
