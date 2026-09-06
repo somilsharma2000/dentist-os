@@ -4,7 +4,7 @@ Dentist OS is a standalone React/Vite + Express application. It runs on standard
 
 ## Runtime
 
-- Node.js 18+
+- Node.js 20+
 - One long-lived Node process for the JSON storage mode
 - HTTPS termination at the reverse proxy
 - A persistent writable directory for the database

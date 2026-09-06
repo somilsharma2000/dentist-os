@@ -37,7 +37,7 @@ npm run build     # builds the frontend into dist/
 npm start         # serves API + frontend on one port
 ```
 
-Deploy anywhere that runs Node 18+ (Render, Railway, Fly.io, a VPS). Set `PORT` if needed. Data persists in `server/db.json` — swap in SQLite/Postgres later if you like.
+Deploy anywhere that runs Node 20+ (Render, Railway, Fly.io, a VPS). Set `PORT` if needed. Data persists in `server/db.json` — swap in SQLite/Postgres later if you like.
 
 ## What's inside
 
