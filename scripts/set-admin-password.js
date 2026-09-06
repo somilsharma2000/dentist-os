@@ -12,7 +12,7 @@ const ask = (q) => new Promise((resolve) => rl.question(q, resolve));
 (async () => {
   try {
     const email = String(await ask('Staff email to update: ')).trim().toLowerCase();
-    const password = await ask('New password (input is hidden only in supported terminals): ');
+    const password = await ask('New password: ');
     const confirm = await ask('Repeat new password: ');
     if (!email || password.length < 12 || password !== confirm) {
       throw new Error('Password must be at least 12 characters and both entries must match.');
