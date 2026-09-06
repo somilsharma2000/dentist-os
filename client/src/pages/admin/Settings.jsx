@@ -16,6 +16,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const [settings, setSettings] = useState({
     clinicName: '',
@@ -66,7 +67,13 @@ export default function Settings() {
               reviews: data.goals?.reviews ?? 15
             },
             monthly: data.monthly || { revenue: 0, newPatients: 0, treatments: 0, reviews: 0 },
-            ...data
+            ...data,
+            billingProfile: {
+              gstRegistered: false, gstin: '', legalName: '', tradeName: '', registeredAddress: '',
+              state: '', stateCode: '', placeOfSupplyState: '', defaultTaxRate: 0, invoicePrefix: 'INV',
+              invoiceNotes: '', supportEmail: '', supportPhone: '',
+              ...(data.billingProfile || {})
+            }
           });
         }
       } catch (err) {
@@ -81,11 +88,17 @@ export default function Settings() {
   const handleSave = async (e) => {
     e?.preventDefault();
     try {
+      setSaveError('');
+      const billing = settings.billingProfile || {};
+      const gstin = String(billing.gstin || '').trim().toUpperCase();
+      if (billing.gstRegistered && !gstin) throw new Error('Enter the clinic GSTIN or mark GST registration as not applicable.');
+      if (gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin)) throw new Error('Enter a valid 15-character GSTIN.');
       setSaving(true);
-      await api.put('/settings', settings);
+      await api.put('/settings', { ...settings, billingProfile: { ...billing, gstin } });
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
+      setSaveError(err.message || 'Could not save settings.');
       console.error('Error saving settings:', err);
     } finally {
       setSaving(false);
@@ -147,6 +160,12 @@ export default function Settings() {
         <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-4 text-emerald-800 flex items-center gap-2">
           <CheckCircle2 className="h-5 w-5 shrink-0" />
           <p className="text-sm font-medium">Saved successfully.</p>
+        </div>
+      )}
+
+      {saveError && (
+        <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-4 text-destructive text-sm font-medium">
+          {saveError}
         </div>
       )}
 
@@ -241,6 +260,124 @@ export default function Settings() {
                 value={settings.email}
                 onChange={(e) => setSettings({ ...settings, email: e.target.value })}
                 placeholder="hello@smilecraft.in"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tax and legal billing profile */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Legal & GST Billing Profile</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Keep the clinic’s legal identity here for invoices, patient notices, and tax records. This is clinic information—not Dentist OS tax advice. Confirm rates and invoice requirements with your CA.
+            </p>
+            <label className="flex items-center gap-3 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={settings.billingProfile?.gstRegistered === true}
+                onChange={(e) => setSettings({ ...settings, billingProfile: { ...settings.billingProfile, gstRegistered: e.target.checked } })}
+                className="h-4 w-4 rounded border-input"
+              />
+              Clinic is GST registered
+            </label>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">GSTIN</label>
+                <Input
+                  value={settings.billingProfile?.gstin || ''}
+                  onChange={(e) => setSettings({ ...settings, billingProfile: { ...settings.billingProfile, gstin: e.target.value.toUpperCase() } })}
+                  placeholder="29ABCDE1234F1Z5"
+                  maxLength={15}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Legal entity name</label>
+                <Input
+                  value={settings.billingProfile?.legalName || ''}
+                  onChange={(e) => setSettings({ ...settings, billingProfile: { ...settings.billingProfile, legalName: e.target.value } })}
+                  placeholder="SmileCraft Healthcare Pvt Ltd"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Trade / clinic name</label>
+                <Input
+                  value={settings.billingProfile?.tradeName || ''}
+                  onChange={(e) => setSettings({ ...settings, billingProfile: { ...settings.billingProfile, tradeName: e.target.value } })}
+                  placeholder="SmileCraft Dental Clinic"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">State</label>
+                <Input
+                  value={settings.billingProfile?.state || ''}
+                  onChange={(e) => setSettings({ ...settings, billingProfile: { ...settings.billingProfile, state: e.target.value } })}
+                  placeholder="Karnataka"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">GST state code</label>
+                <Input
+                  value={settings.billingProfile?.stateCode || ''}
+                  onChange={(e) => setSettings({ ...settings, billingProfile: { ...settings.billingProfile, stateCode: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) } })}
+                  placeholder="29"
+                  maxLength={2}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Default tax rate (%)</label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={settings.billingProfile?.defaultTaxRate ?? 0}
+                  onChange={(e) => setSettings({ ...settings, billingProfile: { ...settings.billingProfile, defaultTaxRate: e.target.value } })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Invoice prefix</label>
+                <Input
+                  value={settings.billingProfile?.invoicePrefix || 'INV'}
+                  onChange={(e) => setSettings({ ...settings, billingProfile: { ...settings.billingProfile, invoicePrefix: e.target.value.toUpperCase() } })}
+                  placeholder="INV"
+                  maxLength={12}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Registered billing address</label>
+                <Input
+                  value={settings.billingProfile?.registeredAddress || ''}
+                  onChange={(e) => setSettings({ ...settings, billingProfile: { ...settings.billingProfile, registeredAddress: e.target.value } })}
+                  placeholder="Full registered address used on invoices"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Billing support email</label>
+                <Input
+                  type="email"
+                  value={settings.billingProfile?.supportEmail || ''}
+                  onChange={(e) => setSettings({ ...settings, billingProfile: { ...settings.billingProfile, supportEmail: e.target.value } })}
+                  placeholder="billing@clinic.in"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Billing support phone</label>
+                <Input
+                  value={settings.billingProfile?.supportPhone || ''}
+                  onChange={(e) => setSettings({ ...settings, billingProfile: { ...settings.billingProfile, supportPhone: e.target.value } })}
+                  placeholder="+91 98765 43210"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Invoice note / terms</label>
+              <Textarea
+                value={settings.billingProfile?.invoiceNotes || ''}
+                onChange={(e) => setSettings({ ...settings, billingProfile: { ...settings.billingProfile, invoiceNotes: e.target.value } })}
+                placeholder="Payment terms, refund instructions, or CA-approved invoice text"
+                rows={3}
               />
             </div>
           </CardContent>

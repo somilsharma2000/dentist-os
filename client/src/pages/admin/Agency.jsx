@@ -28,7 +28,10 @@ export default function Agency() {
     mrr: 25000,
     status: 'Active',
     since: todayISO(),
-    renewal: todayISO()
+    renewal: todayISO(),
+    legalName: '',
+    gstin: '',
+    gstRegistered: false
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -57,11 +60,24 @@ export default function Agency() {
   const handleCreateClient = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
+    const gstin = String(formData.gstin || '').trim().toUpperCase();
+    if (formData.gstRegistered && !gstin) return;
+    if (gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin)) return;
     try {
       setSubmitting(true);
       await api.post('/tenants', {
         ...formData,
-        mrr: Number(formData.mrr) || 0
+        mrr: Number(formData.mrr) || 0,
+        settings: {
+          billingProfile: {
+            gstRegistered: formData.gstRegistered === true,
+            gstin,
+            legalName: formData.legalName.trim(),
+            tradeName: formData.name.trim(),
+            invoicePrefix: 'INV',
+            defaultTaxRate: 0
+          }
+        }
       });
       setOpenModal(false);
       setFormData({
@@ -70,7 +86,8 @@ export default function Agency() {
         mrr: 25000,
         status: 'Active',
         since: todayISO(),
-        renewal: todayISO()
+        renewal: todayISO(),
+        legalName: '', gstin: '', gstRegistered: false
       });
       fetchClients();
     } catch (err) {
@@ -203,6 +220,31 @@ export default function Agency() {
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="e.g. SmileCraft Dental Clinic (MG Road)"
               required
+            />
+          </div>
+
+          <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
+            <p className="text-sm font-semibold text-foreground">Legal & GST setup</p>
+            <p className="text-xs text-muted-foreground">Capture this during onboarding. The clinic can complete the remaining invoice details later under Settings.</p>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={formData.gstRegistered}
+                onChange={(e) => setFormData({ ...formData, gstRegistered: e.target.checked })}
+                className="h-4 w-4 rounded border-input"
+              />
+              GST registered clinic
+            </label>
+            <Input
+              value={formData.legalName}
+              onChange={(e) => setFormData({ ...formData, legalName: e.target.value })}
+              placeholder="Legal entity name"
+            />
+            <Input
+              value={formData.gstin}
+              onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+              placeholder="GSTIN (15 characters)"
+              maxLength={15}
             />
           </div>
 

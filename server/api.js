@@ -828,6 +828,32 @@ TABLES.forEach((t) => {
 });
 
 // ---- Settings ----
+const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+const GST_STATE_RE = /^(0[1-9]|[1-2][0-9]|3[0-8]|97)$/;
+
+function validateBillingProfile(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return { error: 'billingProfile must be an object.' };
+  }
+  const out = {};
+  const textFields = ['legalName', 'tradeName', 'registeredAddress', 'state', 'stateCode', 'placeOfSupplyState', 'invoicePrefix', 'invoiceNotes', 'supportEmail', 'supportPhone'];
+  for (const key of textFields) {
+    if (input[key] !== undefined) out[key] = String(input[key]).trim().slice(0, 300);
+  }
+  out.gstRegistered = input.gstRegistered === true;
+  out.gstin = String(input.gstin || '').trim().toUpperCase();
+  if (out.gstRegistered && !out.gstin) return { error: 'GSTIN is required when GST registration is enabled.' };
+  if (out.gstin && !GSTIN_RE.test(out.gstin)) return { error: 'Invalid GSTIN format.' };
+  if (out.stateCode && !GST_STATE_RE.test(out.stateCode)) return { error: 'Invalid GST state code.' };
+  if (out.invoicePrefix && !/^[A-Z0-9-]{1,12}$/i.test(out.invoicePrefix)) return { error: 'Invoice prefix must use letters, numbers or hyphens only.' };
+  if (input.defaultTaxRate !== undefined && input.defaultTaxRate !== '') {
+    const rate = Number(input.defaultTaxRate);
+    if (!Number.isFinite(rate) || rate < 0 || rate > 100) return { error: 'Default tax rate must be between 0 and 100.' };
+    out.defaultTaxRate = rate;
+  } else out.defaultTaxRate = 0;
+  return { value: out };
+}
+
 router.get('/settings/mine', (req, res) => {
   const s = staff(req);
   if (!s) return res.status(401).json({ error: 'Please sign in.' });
@@ -841,12 +867,18 @@ router.put('/settings', (req, res) => {
   const s = staff(req);
   if (!s) return res.status(401).json({ error: 'Please sign in.' });
   const t = tid(req) ?? 1;
+  const patch = { ...(req.body || {}) };
+  if (patch.billingProfile !== undefined) {
+    const billing = validateBillingProfile(patch.billingProfile);
+    if (billing.error) return res.status(400).json({ error: billing.error });
+    patch.billingProfile = billing.value;
+  }
   if (String(t) === '1') {
-    db.settings = { ...db.settings, ...req.body };
+    db.settings = { ...db.settings, ...patch };
   } else {
     const tn = db.tenants.find((x) => String(x.id) === String(t));
     if (!tn) return res.status(404).json({ error: 'Clinic not found.' });
-    tn.settings = { ...(tn.settings || db.settings), ...req.body };
+    tn.settings = { ...(tn.settings || db.settings), ...patch };
   }
   save();
   res.json(tenantSettings(t));

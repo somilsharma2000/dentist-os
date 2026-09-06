@@ -142,6 +142,12 @@ async function main() {
     record('GET /tenants hides connector secrets (super)', !tlStr.includes('TOPSECRET') && !tlStr.includes('APP_SECRET_XYZ') && !tlStr.includes('wvt_abc123') && !tlStr.includes('AUTHKEY_SECRET'),
       tlStr.includes('TOPSECRET') ? 'leaked apiKey' : '');
 
+    // ---- GST/legal billing profile validation ----
+    const badGst = await api('PUT', '/settings', { token: tok, body: { billingProfile: { gstRegistered: true, gstin: 'NOT-A-GSTIN' } } });
+    record('invalid GSTIN rejected', badGst.status === 400, badGst.status);
+    const goodGst = await api('PUT', '/settings', { token: tok, body: { billingProfile: { gstRegistered: true, gstin: '29ABCDE1234F1Z5', legalName: 'SmileCraft Healthcare Pvt Ltd', stateCode: '29', defaultTaxRate: 18, invoicePrefix: 'INV' } } });
+    record('valid GST profile saved', goodGst.status === 200 && goodGst.json?.billingProfile?.gstin === '29ABCDE1234F1Z5', goodGst.status);
+
     // ---- /whatsapp/send (broken payload reference?) ----
     const sendRes = await Promise.race([
       api('POST', '/whatsapp/send', { token: tok, body: { phone: '9876543210', text: 'hello from test', category: 'utility' } }),
