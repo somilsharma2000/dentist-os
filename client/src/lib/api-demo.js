@@ -107,7 +107,7 @@ function err(status, message) {
 const TABLES = [
   'patients', 'dentists', 'appointments', 'treatmentPlans', 'invoices', 'leads', 'reviews',
   'tasks', 'inventory', 'automations', 'recall', 'socialPosts', 'tenants', 'staff',
-  'whatsappChats', 'qrCodes', 'consentLogs'
+  'whatsappChats', 'qrCodes'
 ];
 const TENANT_TABLES = new Set(TABLES.filter((t) => t !== 'tenants' && t !== 'staff'));
 const SUPER_TABLES = new Set(['tenants', 'staff']);
