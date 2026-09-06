@@ -4,7 +4,17 @@ const fs = require('fs');
 const { router } = require('./api');
 
 const app = express();
-app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = Buffer.from(buf); } }));
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+  next();
+});
+app.use(express.json({ limit: '256kb', verify: (req, _res, buf) => { req.rawBody = Buffer.from(buf); } }));
 
 app.use('/api', router);
 

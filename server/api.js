@@ -12,6 +12,7 @@ const PUBLIC_TENANT = 1; // the clinic that owns the public website
 // ---- Auth: in-memory token sessions (demo-grade; swap for JWT in production hardening) ----
 const SESSIONS = {}; // token -> { staff, tenant, viewTenantId, expiresAt }
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+const PASSWORD_HASH_PREFIX = 'scrypt$';
 
 const LOGIN_ATTEMPTS = {}; // key -> { count, windowStart }
 const LOGIN_LIMIT = 10; // attempts per window
@@ -66,7 +67,10 @@ function lastMonths(count) {
 }
 
 function isIsoDate(s) {
-  return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s + 'T00:00:00Z'));
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const [y, m, d] = s.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
 }
 
 // Normalize an Indian phone number to a bare 10-digit string (or null if invalid).
@@ -133,6 +137,46 @@ function publicRateLimited(req, bucket, limit, windowMs = 10 * 60 * 1000) {
   return rec.count > limit;
 }
 
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const derived = crypto.scryptSync(String(password), salt, 32);
+  return `${PASSWORD_HASH_PREFIX}${salt}$${derived.toString('hex')}`;
+}
+
+function verifyPassword(password, stored) {
+  if (typeof stored !== 'string' || typeof password !== 'string') return false;
+  if (!stored.startsWith(PASSWORD_HASH_PREFIX)) {
+    const a = Buffer.from(stored); const b = Buffer.from(password);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  }
+  const parts = stored.split('$');
+  if (parts.length !== 3 || !/^[a-f0-9]{32}$/.test(parts[1]) || !/^[a-f0-9]{64}$/.test(parts[2])) return false;
+  const derived = crypto.scryptSync(password, parts[1], 32);
+  const expected = Buffer.from(parts[2], 'hex');
+  return crypto.timingSafeEqual(derived, expected);
+}
+
+function migrateLegacyPasswords() {
+  let changed = false;
+  for (const u of db.staff || []) {
+    if (typeof u.password === 'string' && !u.password.startsWith(PASSWORD_HASH_PREFIX)) {
+      u.password = hashPassword(u.password);
+      changed = true;
+    }
+  }
+  if (changed) save();
+}
+
+migrateLegacyPasswords();
+
+function prepareStaffBody(body) {
+  const out = { ...(body || {}) };
+  if (typeof out.password === 'string' && out.password.length > 0 && !out.password.startsWith(PASSWORD_HASH_PREFIX)) {
+    out.password = hashPassword(out.password);
+  }
+  return out;
+}
+
 function newToken() {
   return 'tok_' + crypto.randomBytes(24).toString('hex');
 }
@@ -182,7 +226,7 @@ router.post('/auth/login', (req, res) => {
     (u) => String(u.email).toLowerCase() === String(email || '').trim().toLowerCase()
   );
   // `!password` blocks the old undefined-vs-undefined bypass on passwordless staff records.
-  if (!user || !password || user.password !== password) {
+  if (!user || !password || !verifyPassword(String(password), user.password)) {
     return res.status(401).json({ error: 'Invalid email or password.' });
   }
   const tenant = db.tenants.find((t) => t.id === user.tenantId) || null;
@@ -742,7 +786,8 @@ TABLES.forEach((t) => {
     if (TENANT_TABLES.has(t) && tid(req) === null) {
       return res.status(400).json({ error: 'Pick a clinic first.' });
     }
-    const body = sanitizeBody(req.body, { allowTenantId: s.staff.role === 'super' });
+    let body = sanitizeBody(req.body, { allowTenantId: s.staff.role === 'super' });
+    if (t === 'staff') body = prepareStaffBody(body);
     // Basic sanity validation for money-bearing fields.
     if (t === 'invoices' && body.amount !== undefined) {
       const amt = Number(body.amount);
@@ -770,7 +815,8 @@ TABLES.forEach((t) => {
     if (t !== 'tenants' && active !== null && String(arr[i].tenantId || PUBLIC_TENANT) !== String(active)) {
       return res.status(403).json({ error: 'This record belongs to another clinic.' });
     }
-    const body = sanitizeBody(req.body, { allowTenantId: s.staff.role === 'super' });
+    let body = sanitizeBody(req.body, { allowTenantId: s.staff.role === 'super' });
+    if (t === 'staff') body = prepareStaffBody(body);
     if (t === 'invoices' && body.amount !== undefined) {
       const amt = Number(body.amount);
       if (!Number.isFinite(amt) || amt < 0) return res.status(400).json({ error: 'Invalid invoice amount.' });
@@ -951,6 +997,9 @@ router.get('/slots', (req, res) => {
 });
 
 router.post('/bookings', (req, res) => {
+  if (publicRateLimited(req, 'booking', 30)) {
+    return res.status(429).json({ error: 'Too many booking attempts. Please try again later.' });
+  }
   const { service, dentistId, date, time, name, phone, email, notes, consentGiven, marketingConsentGiven, consentVersion } = req.body || {};
   if (!name || !phone || !date || !time || !service) {
     return res.status(400).json({ error: 'Missing required booking details.' });
@@ -1007,7 +1056,10 @@ router.post('/bookings', (req, res) => {
     });
   }
   save();
-  res.json({ appointment: appt, patient, isNewPatient: isNew });
+  res.json({
+    appointment: { id: appt.id, date: appt.date, time: appt.time, status: appt.status },
+    isNewPatient: isNew
+  });
 });
 
 router.post('/reviews/public', (req, res) => {
@@ -1030,7 +1082,7 @@ router.post('/reviews/public', (req, res) => {
   };
   db.reviews.push(review);
   save();
-  res.json({ ok: true, review });
+  res.json({ ok: true, reviewId: review.id });
 });
 
 // ---- Patient portal (tenant 1) ----
