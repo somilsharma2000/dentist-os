@@ -262,6 +262,55 @@ router.put('/integrations', (req, res) => {
   res.json({ ok: true, integrations: maskIntegrations(tn.integrations) });
 });
 
+// ---- WhatsApp outbound transport ----
+// Messages are only sent when the clinic has configured Meta Cloud API credentials.
+// Without credentials the API refuses the send instead of pretending delivery.
+router.post('/whatsapp/send', async (req, res) => {
+  const s = staff(req);
+  if (!s) return res.status(401).json({ error: 'Please sign in.' });
+  const { phone, patientId, text, category = 'utility' } = req.body || {};
+  const normalizedPhone = normalizePhone(phone);
+  if (!normalizedPhone || typeof text !== 'string' || !text.trim()) {
+    return res.status(400).json({ error: 'A valid Indian phone number and message are required.' });
+  }
+  if (text.length > 4096) return res.status(400).json({ error: 'Message is too long.' });
+  if (!['utility', 'marketing'].includes(category)) return res.status(400).json({ error: 'Invalid message category.' });
+  const tenantId = tid(req);
+  if (tenantId === null) return res.status(400).json({ error: 'Pick a clinic first.' });
+  const patient = sc(db.patients, tenantId).find((p) => p.phone === normalizedPhone || (patientId && String(p.id) === String(patientId)));
+  const phoneForSend = patient?.phone || normalizedPhone;
+  const consent = (db.consentLogs || []).find((c) =>
+    String(c.tenantId || PUBLIC_TENANT) === String(tenantId) && c.phone === phoneForSend && c.scope === (category === 'utility' ? 'service' : 'marketing')
+  );
+  // Older records are linked by patientId; use that when phone wasn't stored.
+  const linkedConsent = consent || (db.consentLogs || []).find((c) =>
+    String(c.tenantId || PUBLIC_TENANT) === String(tenantId) && patient && String(c.patientId) === String(patient.id) && c.scope === (category === 'utility' ? 'service' : 'marketing')
+  );
+  if (!linkedConsent) return res.status(403).json({ error: `No ${category} consent is on file for this number.` });
+  const tenant = db.tenants.find((t) => String(t.id) === String(tenantId));
+  const config = tenant?.integrations?.whatsapp?.config || {};
+  if (!config.apiKey || !config.phoneNumberId) {
+    return res.status(503).json({ error: 'WhatsApp is not configured. Add the Meta access token and phone number ID in Settings.' });
+  }
+  db.whatsappMessages = db.whatsappMessages || [];
+  const message = { id: nextId(), tenantId, patientId: patient?.id || null, phone: phoneForSend, direction: 'out', category, text: text.trim(), consentId: linkedConsent.id, status: 'queued', createdAt: new Date().toISOString() };
+  try {
+    const response = await fetch(`https://graph.facebook.com/v20.0/${encodeURIComponent(config.phoneNumberId)}/messages`, {
+      method: 'POST', headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messaging_product: 'whatsapp', to: phoneForSend, type: 'text', text: { preview_url: false, body: text.trim() } })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload?.error?.message || 'WhatsApp provider rejected the message.');
+    message.status = 'sent'; message.providerMessageId = payload.messages?.[0]?.id || null;
+    db.whatsappMessages.push(message); save();
+    return res.json({ message: { ...message, apiKey: undefined } });
+  } catch (e) {
+    message.status = 'failed'; message.error = String(e.message).slice(0, 300);
+    db.whatsappMessages.push(message); save();
+    return res.status(502).json({ error: message.error, message: { id: message.id, status: message.status } });
+  }
+});
+
 // ---- Generic CRUD (tenant-scoped) ----
 TABLES.forEach((t) => {
   router.get('/' + t, (req, res) => {

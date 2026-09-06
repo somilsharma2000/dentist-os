@@ -29,7 +29,8 @@ const CONNECTORS = [
     description: 'Send appointment confirmations & reminders on WhatsApp.',
     fields: [
       { name: 'phoneNumber', label: 'WhatsApp Business Number', placeholder: '+91 98765 43210' },
-      { name: 'apiKey', label: 'API Key (Meta / BSP)', placeholder: 'EAAG…' }
+      { name: 'phoneNumberId', label: 'Meta Phone Number ID', placeholder: '123456789012345' },
+      { name: 'apiKey', label: 'Meta Access Token', placeholder: 'EAAG…', type: 'password' }
     ]
   },
   {

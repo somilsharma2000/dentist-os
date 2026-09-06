@@ -440,12 +440,28 @@ function routeGet(path) {
   throw err(404, 'Not found: ' + p);
 }
 
+function sendWhatsApp(body) {
+  const { phone, patientId, text, category = 'utility' } = body || {};
+  const normalizedPhone = normalizePhone(phone);
+  if (!normalizedPhone || typeof text !== 'string' || !text.trim()) throw err(400, 'A valid Indian phone number and message are required.');
+  if (text.length > 4096) throw err(400, 'Message is too long.');
+  if (!['utility', 'marketing'].includes(category)) throw err(400, 'Invalid message category.');
+  const patient = sc(db.patients, PUBLIC_TENANT).find((p) => p.phone === normalizedPhone || (patientId && String(p.id) === String(patientId)));
+  const consent = (db.consentLogs || []).find((c) => String(c.tenantId || PUBLIC_TENANT) === String(PUBLIC_TENANT) && patient && String(c.patientId) === String(patient.id) && c.scope === (category === 'utility' ? 'service' : 'marketing'));
+  if (!consent) throw err(403, `No ${category} consent is on file for this number.`);
+  db.whatsappMessages = db.whatsappMessages || [];
+  const message = { id: nextId(), tenantId: PUBLIC_TENANT, patientId: patient?.id || null, phone: patient?.phone || normalizedPhone, direction: 'out', category, text: text.trim(), consentId: consent.id, status: 'simulated', createdAt: new Date().toISOString() };
+  db.whatsappMessages.push(message); persist();
+  return { message: clone(message), simulated: true };
+}
+
 function routePost(path, body) {
   if (path === '/auth/login') return login(body);
   if (path === '/auth/logout') return { ok: true };
   if (path === '/bookings') return createBooking(body);
   if (path === '/reviews/public') return publicReview(body);
   if (path === '/portal/login') return portalLogin(body);
+  if (path === '/whatsapp/send') return sendWhatsApp(body);
   if (path === '/portal/register') return portalRegister(body);
 
   const parts = path.split('/').filter(Boolean);

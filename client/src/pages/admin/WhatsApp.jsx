@@ -56,17 +56,22 @@ export default function WhatsApp() {
       minute: '2-digit'
     });
 
-    const newMsg = {
-      from: 'clinic',
-      text: replyText.trim(),
-      time: timeStr
-    };
-
-    const updatedMessages = [...(selectedChat.messages || []), newMsg];
-    const updatedChat = { ...selectedChat, messages: updatedMessages, unread: 0 };
-
     try {
       setSending(true);
+      const result = await api.post('/whatsapp/send', {
+        phone: selectedChat.phone,
+        patientId: selectedChat.patientId,
+        text: replyText.trim(),
+        category: 'utility'
+      });
+      const newMsg = {
+        from: 'clinic',
+        text: replyText.trim(),
+        time: timeStr,
+        status: result?.message?.status || 'queued'
+      };
+      const updatedMessages = [...(selectedChat.messages || []), newMsg];
+      const updatedChat = { ...selectedChat, messages: updatedMessages, unread: 0 };
       await api.put(`/whatsappChats/${selectedChat.id}`, updatedChat);
       setReplyText('');
       setChats((prev) =>
