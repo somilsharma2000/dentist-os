@@ -2,7 +2,7 @@
 
 Tools, skills, and linked repos an AI agent should use when working on Dentist OS. Companion to `AGENTS.md`.
 
-## Installed agent skills (Base44 skill store)
+## Optional developer tools
 
 ### 1. GitHub Issues (`github-issues`)
 - **Purpose:** create/update GitHub issues, labels, assignees, milestones, issue types via the GitHub MCP server. Use it to track punch-list items (e.g. "QR generation spot-check", "Phase 9 production deploy") as real issues in the repo.

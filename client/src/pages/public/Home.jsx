@@ -84,7 +84,7 @@ export default function Home() {
           </div>
         </div>
           <img
-            src="https://media.base44.com/images/public/6a693c01172fbf5ddd0919ba/989fa81a1_generated_image.png"
+            src="/assets/clinic-reception.png"
             alt="SmileCraft Dental Clinic reception — bright, modern, and welcoming"
             className="mx-auto w-full max-w-md rounded-2xl shadow-lg object-cover"
           />
@@ -155,7 +155,7 @@ export default function Home() {
         </div>
         <div className="grid items-center gap-8 md:grid-cols-2">
           <img
-            src="https://media.base44.com/images/public/6a693c01172fbf5ddd0919ba/417f45335_generated_image.png"
+            src="/assets/clinic-team.png"
             alt="Our dentist in a modern, sterile treatment room"
             className="w-full rounded-2xl shadow-md object-cover"
           />
