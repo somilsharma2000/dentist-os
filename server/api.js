@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { load, save, get } = require('./db');
 const { seed } = require('./seed');
+const { PASSWORD_HASH_PREFIX, hashPassword, verifyPassword } = require('./passwords');
 
 load(seed);
 
@@ -12,7 +13,6 @@ const PUBLIC_TENANT = 1; // the clinic that owns the public website
 // ---- Auth: in-memory token sessions (demo-grade; swap for JWT in production hardening) ----
 const SESSIONS = {}; // token -> { staff, tenant, viewTenantId, expiresAt }
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
-const PASSWORD_HASH_PREFIX = 'scrypt$';
 
 const LOGIN_ATTEMPTS = {}; // key -> { count, windowStart }
 const LOGIN_LIMIT = 10; // attempts per window
@@ -135,25 +135,6 @@ function publicRateLimited(req, bucket, limit, windowMs = 10 * 60 * 1000) {
   }
   rec.count += 1;
   return rec.count > limit;
-}
-
-function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const derived = crypto.scryptSync(String(password), salt, 32);
-  return `${PASSWORD_HASH_PREFIX}${salt}$${derived.toString('hex')}`;
-}
-
-function verifyPassword(password, stored) {
-  if (typeof stored !== 'string' || typeof password !== 'string') return false;
-  if (!stored.startsWith(PASSWORD_HASH_PREFIX)) {
-    const a = Buffer.from(stored); const b = Buffer.from(password);
-    return a.length === b.length && crypto.timingSafeEqual(a, b);
-  }
-  const parts = stored.split('$');
-  if (parts.length !== 3 || !/^[a-f0-9]{32}$/.test(parts[1]) || !/^[a-f0-9]{64}$/.test(parts[2])) return false;
-  const derived = crypto.scryptSync(password, parts[1], 32);
-  const expected = Buffer.from(parts[2], 'hex');
-  return crypto.timingSafeEqual(derived, expected);
 }
 
 function migrateLegacyPasswords() {
