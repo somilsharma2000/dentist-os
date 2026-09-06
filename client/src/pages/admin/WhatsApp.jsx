@@ -19,6 +19,13 @@ export default function WhatsApp() {
   const [selectedChatId, setSelectedChatId] = useState(null);
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
+  // Approved-template mode (Meta WhatsApp Business API): templates must be
+  // pre-approved by Meta in the clinic's WhatsApp Manager; free-form replies
+  // only deliver within the 24-hour customer-service window.
+  const [templateMode, setTemplateMode] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateLang, setTemplateLang] = useState('en');
+  const [templateVars, setTemplateVars] = useState('');
   const messagesEndRef = useRef(null);
 
   const fetchChats = async () => {
@@ -49,7 +56,42 @@ export default function WhatsApp() {
 
   const handleSendReply = async (e) => {
     e?.preventDefault();
-    if (!replyText.trim() || !selectedChat) return;
+    if (!selectedChat || sending) return;
+    const name = templateName.trim();
+    if (!templateMode && !replyText.trim()) return;
+    if (templateMode && !name) return;
+
+    // One body variable per line → Meta template body parameters.
+    const bodyVars = templateVars
+      .split(/[\n,]/)
+      .map((v) => v.trim())
+      .filter(Boolean);
+
+    let sendBody;
+    let displayText;
+    if (templateMode) {
+      sendBody = {
+        phone: selectedChat.phone,
+        patientId: selectedChat.patientId,
+        category: 'utility',
+        template: {
+          name,
+          language: templateLang.trim() || 'en',
+          ...(bodyVars.length
+            ? { components: [{ type: 'body', parameters: bodyVars.map((v) => ({ type: 'text', text: v })) }] }
+            : {})
+        }
+      };
+      displayText = `[Template: ${name}]${bodyVars.length ? ' ' + bodyVars.join(' | ') : ''}`;
+    } else {
+      sendBody = {
+        phone: selectedChat.phone,
+        patientId: selectedChat.patientId,
+        text: replyText.trim(),
+        category: 'utility'
+      };
+      displayText = replyText.trim();
+    }
 
     const timeStr = new Date().toLocaleTimeString('en-IN', {
       hour: '2-digit',
@@ -58,15 +100,10 @@ export default function WhatsApp() {
 
     try {
       setSending(true);
-      const result = await api.post('/whatsapp/send', {
-        phone: selectedChat.phone,
-        patientId: selectedChat.patientId,
-        text: replyText.trim(),
-        category: 'utility'
-      });
+      const result = await api.post('/whatsapp/send', sendBody);
       const newMsg = {
         from: 'clinic',
-        text: replyText.trim(),
+        text: displayText,
         time: timeStr,
         status: result?.message?.status || 'queued'
       };
@@ -74,6 +111,7 @@ export default function WhatsApp() {
       const updatedChat = { ...selectedChat, messages: updatedMessages, unread: 0 };
       await api.put(`/whatsappChats/${selectedChat.id}`, updatedChat);
       setReplyText('');
+      setTemplateVars('');
       setChats((prev) =>
         prev.map((c) => (c.id === selectedChat.id ? updatedChat : c))
       );
@@ -187,20 +225,64 @@ export default function WhatsApp() {
                 </div>
 
                 {/* Reply Form */}
-                <form
-                  onSubmit={handleSendReply}
-                  className="p-3 border-t bg-card flex items-center gap-2"
-                >
-                  <Input
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    placeholder={`Reply to ${selectedChat.patientName}...`}
-                    disabled={sending}
-                    className="flex-1"
-                  />
-                  <Button type="submit" disabled={sending || !replyText.trim()}>
-                    <Send className="h-4 w-4" />
-                  </Button>
+                <form onSubmit={handleSendReply} className="p-3 border-t bg-card space-y-2">
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setTemplateMode((m) => !m)}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      {templateMode
+                        ? '← Back to free-form reply'
+                        : 'Send a Meta-approved template →'}
+                    </button>
+                    <span className="text-[10px] text-muted-foreground">
+                      {templateMode
+                        ? 'Use the exact approved template name from WhatsApp Manager'
+                        : 'Free-form replies deliver within 24h of the patient\u2019s last message'}
+                    </span>
+                  </div>
+                  {templateMode ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={templateName}
+                        onChange={(e) => setTemplateName(e.target.value)}
+                        placeholder="Template name (e.g. appointment_reminder)"
+                        disabled={sending}
+                        className="flex-1"
+                      />
+                      <Input
+                        value={templateLang}
+                        onChange={(e) => setTemplateLang(e.target.value)}
+                        placeholder="en"
+                        disabled={sending}
+                        className="w-24"
+                      />
+                      <Input
+                        value={templateVars}
+                        onChange={(e) => setTemplateVars(e.target.value)}
+                        placeholder="Body variables (one per line or comma-separated)"
+                        disabled={sending}
+                        className="flex-1"
+                      />
+                      <Button type="submit" disabled={sending || !templateName.trim()}>
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder={`Reply to ${selectedChat.patientName}...`}
+                        disabled={sending}
+                        className="flex-1"
+                      />
+                      <Button type="submit" disabled={sending || !replyText.trim()}>
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </form>
               </div>
             ) : (

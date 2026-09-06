@@ -325,51 +325,358 @@ router.post('/webhooks/whatsapp', (req, res) => {
 // ---- WhatsApp outbound transport ----
 // Messages are only sent when the clinic has configured Meta Cloud API credentials.
 // Without credentials the API refuses the send instead of pretending delivery.
+//
+// Two payload modes, mirroring the Meta Cloud API:
+//   1. Free-form text:    { phone, patientId, text, category }
+//      Meta only delivers free-form text inside the 24-hour customer-service
+//      window that opens when the patient last messages the clinic.
+//   2. Approved template: { phone, patientId, template: { name, language, components }, category }
+//      `name` must be the exact name of a template Meta has ALREADY approved for
+//      the clinic's WhatsApp Business Account; it is passed through verbatim.
+//      Deliverable outside the 24-hour window. The server cannot verify template
+//      approval upfront — Meta rejects unknown/unapproved templates at send time
+//      and the send is recorded as failed.
+// Both modes share the same consent gate: a DPDP consent log (scope "service" for
+// category utility, "marketing" for category marketing) must be on file for the
+// recipient, otherwise the send is refused with 403.
+const TEMPLATE_NAME_RE = /^[A-Za-z0-9_]{1,60}$/;
+const TEMPLATE_LANG_RE = /^[A-Za-z0-9_-]{2,20}$/;
+const TEMPLATE_COMPONENT_TYPES = new Set(['header', 'body', 'button']);
+const TEMPLATE_MAX_COMPONENTS = 10;
+const TEMPLATE_MAX_JSON_CHARS = 4096; // template payload cap
+const DEFAULT_TEMPLATE_LANGUAGE = 'en';
+
+function templateRequestError(template) {
+  if (!template || typeof template !== 'object' || Array.isArray(template)) {
+    return 'template must be an object: { name, language?, components? }.';
+  }
+  if (!TEMPLATE_NAME_RE.test(String(template.name || ''))) {
+    return 'Invalid template name. Use the exact name of a Meta-approved template (letters, numbers, underscores).';
+  }
+  const language = template.language === undefined || template.language === null
+    ? DEFAULT_TEMPLATE_LANGUAGE
+    : String(template.language);
+  if (!TEMPLATE_LANG_RE.test(language)) {
+    return 'Invalid template language code (e.g. "en", "en_US", "hi").';
+  }
+  if (template.components !== undefined && template.components !== null) {
+    if (!Array.isArray(template.components) || template.components.length > TEMPLATE_MAX_COMPONENTS) {
+      return 'template.components must be an array of at most 10 items.';
+    }
+    for (const c of template.components) {
+      if (!c || typeof c !== 'object' || Array.isArray(c) || !TEMPLATE_COMPONENT_TYPES.has(String(c.type || ''))) {
+        return 'Each template component needs a valid type: header, body or button.';
+      }
+    }
+  }
+  if (JSON.stringify(template).length > TEMPLATE_MAX_JSON_CHARS) {
+    return 'Template payload is too large.';
+  }
+  return null;
+}
+
 router.post('/whatsapp/send', async (req, res) => {
   const s = staff(req);
   if (!s) return res.status(401).json({ error: 'Please sign in.' });
-  const { phone, patientId, text, category = 'utility' } = req.body || {};
+  const { phone, patientId, text, template, category = 'utility' } = req.body || {};
   const normalizedPhone = normalizePhone(phone);
-  if (!normalizedPhone || typeof text !== 'string' || !text.trim()) {
-    return res.status(400).json({ error: 'A valid Indian phone number and message are required.' });
+  const templateMode = template !== undefined && template !== null;
+  if (!normalizedPhone) return res.status(400).json({ error: 'A valid 10-digit Indian mobile number is required.' });
+  if (templateMode && typeof text === 'string' && text.trim()) {
+    return res.status(400).json({ error: 'Send either free-form text or an approved template, not both.' });
   }
-  if (text.length > 4096) return res.status(400).json({ error: 'Message is too long.' });
+  if (templateMode) {
+    const terr = templateRequestError(template);
+    if (terr) return res.status(400).json({ error: terr });
+  } else {
+    if (typeof text !== 'string' || !text.trim()) {
+      return res.status(400).json({ error: 'A message or an approved template is required.' });
+    }
+    if (text.length > 4096) return res.status(400).json({ error: 'Message is too long.' });
+  }
   if (!['utility', 'marketing'].includes(category)) return res.status(400).json({ error: 'Invalid message category.' });
   const tenantId = tid(req);
   if (tenantId === null) return res.status(400).json({ error: 'Pick a clinic first.' });
   const patient = sc(db.patients, tenantId).find((p) => p.phone === normalizedPhone || (patientId && String(p.id) === String(patientId)));
   const phoneForSend = patient?.phone || normalizedPhone;
-  const consent = (db.consentLogs || []).find((c) =>
-    String(c.tenantId || PUBLIC_TENANT) === String(tenantId) && c.phone === phoneForSend && c.scope === (category === 'utility' ? 'service' : 'marketing')
-  );
-  // Older records are linked by patientId; use that when phone wasn't stored.
-  const linkedConsent = consent || (db.consentLogs || []).find((c) =>
-    String(c.tenantId || PUBLIC_TENANT) === String(tenantId) && patient && String(c.patientId) === String(patient.id) && c.scope === (category === 'utility' ? 'service' : 'marketing')
-  );
-  if (!linkedConsent) return res.status(403).json({ error: `No ${category} consent is on file for this number.` });
+  // Consent gate + provider dispatch live in deliverWhatsApp (shared with the
+  // scheduler-ready reminder job below) so both paths enforce identical rules.
+  const result = await deliverWhatsApp({ tenantId, patient, phone: phoneForSend, category, payload });
+  if (result.ok) return res.json({ message: { ...result.message, apiKey: undefined } });
+  if (result.skipped) {
+    if (result.reason === 'no-consent') return res.status(403).json({ error: `No ${category} consent is on file for this number.` });
+    if (result.reason === 'whatsapp-not-configured') return res.status(503).json({ error: 'WhatsApp is not configured. Add the Meta access token and phone number ID in Settings.' });
+    return res.status(400).json({ error: 'A valid 10-digit Indian mobile number is required.' });
+  }
+  return res.status(502).json({ error: result.error, message: { id: result.message.id, status: result.message.status } });
+});
+
+// ---- Consent-aware WhatsApp transport (shared) ----
+// Used by POST /whatsapp/send above and the reminder/recall job below, so the
+// consent gate can never drift between them:
+//   * no DPDP consent on file         -> { ok:false, skipped:true, reason:'no-consent' }
+//   * no Meta credentials configured  -> { ok:false, skipped:true, reason:'whatsapp-not-configured' }
+//   * dryRun                          -> { ok:true, dryRun:true }  (writes nothing, consumes no ids)
+//   * provider accepted               -> { ok:true, status:'sent', message }
+//   * provider rejected / offline     -> { ok:false, status:'failed', error, message } (recorded as failed)
+// The function never throws; callers map outcomes to their own responses.
+async function deliverWhatsApp({ tenantId, patient, phone, category, payload, jobRef = null, dryRun = false }) {
+  const phoneForSend = (patient && patient.phone) || normalizePhone(phone);
+  if (!phoneForSend) return { ok: false, skipped: true, reason: 'invalid-phone' };
+  const consent = findEffectiveConsent(tenantId, patient, phoneForSend, category);
+  if (!consent) return { ok: false, skipped: true, reason: 'no-consent' };
   const tenant = db.tenants.find((t) => String(t.id) === String(tenantId));
   const config = tenant?.integrations?.whatsapp?.config || {};
-  if (!config.apiKey || !config.phoneNumberId) {
-    return res.status(503).json({ error: 'WhatsApp is not configured. Add the Meta access token and phone number ID in Settings.' });
+  if (!config.apiKey || !config.phoneNumberId) return { ok: false, skipped: true, reason: 'whatsapp-not-configured' };
+  if (dryRun) {
+    return {
+      ok: true, dryRun: true,
+      message: {
+        tenantId, patientId: patient?.id || null, phone: phoneForSend, direction: 'out',
+        type: payload.type, category, jobRef, consentId: consent.id
+      }
+    };
   }
-  db.whatsappMessages = db.whatsappMessages || [];
-  const message = { id: nextId(), tenantId, patientId: patient?.id || null, phone: phoneForSend, direction: 'out', category, text: text.trim(), consentId: linkedConsent.id, status: 'queued', createdAt: new Date().toISOString() };
+  const message = {
+    id: nextId(), tenantId, patientId: patient?.id || null, phone: phoneForSend, direction: 'out',
+    type: payload.type, category,
+    text: payload.type === 'text' ? payload.text.body : null,
+    ...(payload.type === 'template' ? {
+      templateName: payload.template.name,
+      templateLanguage: payload.template.language.code,
+      templateComponents: payload.template.components || []
+    } : {}),
+    ...(jobRef ? { jobRef } : {}),
+    consentId: consent.id, status: 'queued', createdAt: new Date().toISOString()
+  };
   try {
     const response = await fetch(`https://graph.facebook.com/v20.0/${encodeURIComponent(config.phoneNumberId)}/messages`, {
       method: 'POST', headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messaging_product: 'whatsapp', to: phoneForSend, type: 'text', text: { preview_url: false, body: text.trim() } })
+      body: JSON.stringify(payload)
     });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload?.error?.message || 'WhatsApp provider rejected the message.');
-    message.status = 'sent'; message.providerMessageId = payload.messages?.[0]?.id || null;
+    const providerPayload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(providerPayload?.error?.message || 'WhatsApp provider rejected the message.');
+    message.status = 'sent'; message.providerMessageId = providerPayload.messages?.[0]?.id || null;
+    db.whatsappMessages = db.whatsappMessages || [];
     db.whatsappMessages.push(message); save();
-    return res.json({ message: { ...message, apiKey: undefined } });
+    return { ok: true, status: 'sent', message };
   } catch (e) {
     message.status = 'failed'; message.error = String(e.message).slice(0, 300);
+    db.whatsappMessages = db.whatsappMessages || [];
     db.whatsappMessages.push(message); save();
-    return res.status(502).json({ error: message.error, message: { id: message.id, status: message.status } });
+    return { ok: false, status: 'failed', error: message.error, message };
+  }
+}
+
+// Consent resolution shared by every outbound WhatsApp path. The LATEST consent
+// log for (tenant, patient-or-phone, scope) wins, so a WhatsApp "STOP" (a
+// webhook-written log with status 'withdrawn') blocks sends even when an older
+// grant exists — previously a withdrawn log still passed the gate.
+// Logs may be linked by patientId (booking flow) or by phone (webhook opt-out).
+function findEffectiveConsent(tenantId, patient, phone, category) {
+  const scope = category === 'utility' ? 'service' : 'marketing';
+  const logs = (db.consentLogs || []).filter((c) => {
+    if (String(c.tenantId || PUBLIC_TENANT) !== String(tenantId)) return false;
+    if (c.scope !== scope) return false;
+    if (patient && c.patientId != null && String(c.patientId) === String(patient.id)) return true;
+    if (phone && c.phone === phone) return true;
+    return false;
+  });
+  if (!logs.length) return null;
+  const latest = logs.reduce((a, b) => (String(b.capturedAt || '') > String(a.capturedAt || '') ? b : a));
+  return String(latest.status || '').toLowerCase() === 'withdrawn' ? null : latest;
+}
+
+// ---- Scheduler-ready reminder job: appointment reminders + recall sends ----
+// POST /jobs/run — auth is either a staff session (clinic-scoped; the agency
+// owner with "All clinics" selected runs every tenant) or an external scheduler
+// sending the x-cron-secret header matching $CRON_SECRET (runs every tenant;
+// leave CRON_SECRET unset to disable that path entirely).
+//
+//   body: { type: 'appointment-reminders' | 'recall-sends' | 'all',
+//           dryRun?: boolean (default false), days?: 0-14 lookahead (default 1),
+//           limit?: 1-200 max recipients (default 50) }
+//
+// Safety properties (mirror the /whatsapp/send contract — no fake sends):
+//   * recipients without DPDP consent are SKIPPED with reason 'no-consent';
+//   * clinics without Meta credentials are SKIPPED with 'whatsapp-not-configured';
+//   * dryRun plans the exact sends but writes nothing (no ids consumed);
+//   * re-runs are idempotent: each send carries jobRef 'appt-reminder-<id>' /
+//     'recall-send-<id>' and a second run reports 'already-sent' instead of
+//     double-texting the patient;
+//   * suspended clinics are skipped entirely;
+//   * free-form text only delivers inside Meta's 24-hour service window —
+//     clinics that need reminders outside it should send via an approved
+//     template (POST /whatsapp/send { template }) once Meta approves one.
+const JOB_TYPES = new Set(['all', 'appointment-reminders', 'recall-sends']);
+const SENT_LIKE = new Set(['sent', 'queued', 'simulated', 'delivered', 'read']);
+const JOB_DEFAULT_DAYS = 1;   // reminders for today + tomorrow
+const JOB_MAX_DAYS = 14;
+const JOB_DEFAULT_LIMIT = 50;
+const JOB_MAX_LIMIT = 200;
+
+function istAddDays(iso, n) {
+  const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+function prettyDate(iso) {
+  const [y, m, d] = String(iso || '').slice(0, 10).split('-').map(Number);
+  return `${d} ${MONTH_NAMES[m - 1]} ${y}`;
+}
+
+function jobAlreadySent(tenantId, jobRef) {
+  return (db.whatsappMessages || []).some((m) =>
+    String(m.tenantId) === String(tenantId) && m.jobRef === jobRef && SENT_LIKE.has(String(m.status || '').toLowerCase())
+  );
+}
+
+function reminderText(kind, patient, clinic, record) {
+  const firstName = String(patient.name || 'there').split(' ')[0];
+  if (kind === 'appointment') {
+    const when = `${prettyDate(record.date)}${record.time ? ` at ${record.time}` : ''}`;
+    return `Hi ${firstName}, a reminder from ${clinic}: your appointment is on ${when}. Reply here or call the clinic to reschedule.`;
+  }
+  return `Hi ${firstName}, ${clinic} here. You're due for: ${record.type}. Reply here or call the clinic to book a time that suits you.`;
+}
+
+async function runReminderJob({ type = 'all', dryRun = false, days = JOB_DEFAULT_DAYS, limit = JOB_DEFAULT_LIMIT, tenantIds = [] }) {
+  const today = istToday();
+  const until = istAddDays(today, days);
+  const results = [];
+  const totals = { planned: 0, sent: 0, skipped: 0, failed: 0 };
+  const reasons = {};
+  const skippedTenants = [];
+  let seen = 0;
+
+  for (const tenantId of tenantIds) {
+    const tenant = db.tenants.find((t) => String(t.id) === String(tenantId));
+    if (!tenant) continue;
+    if (String(tenant.status || '').toLowerCase() === 'suspended') {
+      skippedTenants.push({ id: tenant.id, name: tenant.name, reason: 'suspended' });
+      continue;
+    }
+    const clinic = tenantSettings(tenantId).clinicName || tenant.name;
+    const candidates = [];
+    if (type !== 'recall-sends') {
+      sc(db.appointments, tenantId)
+        .filter((a) => isIsoDate(a.date) && a.date >= today && a.date <= until
+          && !INACTIVE_APPT.has(String(a.status || '').toLowerCase()))
+        .sort((a, b) => String(a.date + a.time).localeCompare(String(b.date + b.time)))
+        .forEach((a) => candidates.push({ kind: 'appointment', record: a }));
+    }
+    if (type !== 'appointment-reminders') {
+      sc(db.recall || [], tenantId)
+        .filter((r) => String(r.status || '').toLowerCase() !== 'sent' && isIsoDate(r.dueDate) && r.dueDate <= today)
+        .sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)))
+        .forEach((r) => candidates.push({ kind: 'recall', record: r }));
+    }
+
+    for (const { kind, record } of candidates) {
+      if (seen >= limit) break;
+      seen += 1;
+      const patient = sc(db.patients, tenantId).find((p) => String(p.id) === String(record.patientId));
+      const base = {
+        tenantId, kind, clinic,
+        appointmentId: kind === 'appointment' ? record.id : undefined,
+        recallId: kind === 'recall' ? record.id : undefined,
+        patientId: patient?.id ?? record.patientId ?? null,
+        patientName: patient?.name || 'Unknown',
+        phone: patient?.phone || null,
+        channel: kind === 'recall' ? String(record.channel || 'WhatsApp') : 'WhatsApp'
+      };
+      if (!patient) {
+        totals.skipped += 1;
+        reasons['patient-not-found'] = (reasons['patient-not-found'] || 0) + 1;
+        results.push({ ...base, outcome: 'skipped', reason: 'patient-not-found' });
+        continue;
+      }
+      // SMS recalls stay visible in the report (operators can send them by hand
+      // once the SMS gateway lands in Phase 10) but are never sent from here.
+      if (kind === 'recall' && base.channel.toLowerCase() !== 'whatsapp') {
+        totals.skipped += 1;
+        reasons['sms-channel-not-supported'] = (reasons['sms-channel-not-supported'] || 0) + 1;
+        results.push({ ...base, outcome: 'skipped', reason: 'sms-channel-not-supported' });
+        continue;
+      }
+      const jobRef = kind === 'appointment' ? `appt-reminder-${record.id}` : `recall-send-${record.id}`;
+      if (jobAlreadySent(tenantId, jobRef)) {
+        totals.skipped += 1;
+        reasons['already-sent'] = (reasons['already-sent'] || 0) + 1;
+        results.push({ ...base, outcome: 'skipped', reason: 'already-sent' });
+        continue;
+      }
+      const category = kind === 'appointment' ? 'utility' : 'marketing';
+      const text = reminderText(kind, patient, clinic, record);
+      const outcome = await deliverWhatsApp({
+        tenantId, patient, phone: base.phone, category, jobRef, dryRun,
+        payload: { messaging_product: 'whatsapp', type: 'text', text: { preview_url: false, body: text } }
+      });
+      if (outcome.ok && outcome.dryRun) {
+        totals.planned += 1;
+        results.push({ ...base, category, jobRef, text, outcome: 'planned' });
+      } else if (outcome.ok) {
+        totals.sent += 1;
+        if (kind === 'recall') { record.status = 'Sent'; record.sentAt = today; record.messageId = outcome.message.id; }
+        results.push({ ...base, category, jobRef, text, outcome: 'sent', messageId: outcome.message.id });
+      } else if (outcome.skipped) {
+        totals.skipped += 1;
+        reasons[outcome.reason] = (reasons[outcome.reason] || 0) + 1;
+        results.push({ ...base, category, jobRef, text, outcome: 'skipped', reason: outcome.reason });
+      } else {
+        totals.failed += 1;
+        results.push({ ...base, category, jobRef, text, outcome: 'failed', error: outcome.error });
+      }
+    }
+  }
+  if (!dryRun) save();
+  return {
+    ok: true,
+    job: { type, dryRun, days, limit, ranOn: today, window: type === 'recall-sends' ? null : { from: today, to: until } },
+    tenants: tenantIds,
+    skippedTenants,
+    totals: { ...totals, processed: seen },
+    reasons,
+    results
+  };
+}
+
+router.post('/jobs/run', async (req, res) => {
+  const { type = 'all', dryRun = false, days = JOB_DEFAULT_DAYS, limit = JOB_DEFAULT_LIMIT } = req.body || {};
+  if (!JOB_TYPES.has(type)) {
+    return res.status(400).json({ error: "Unknown job type. Use 'appointment-reminders', 'recall-sends' or 'all'." });
+  }
+  if (typeof dryRun !== 'boolean') return res.status(400).json({ error: 'dryRun must be true or false.' });
+  if (!Number.isInteger(days) || days < 0 || days > JOB_MAX_DAYS) {
+    return res.status(400).json({ error: `days must be an integer between 0 and ${JOB_MAX_DAYS}.` });
+  }
+  if (!Number.isInteger(limit) || limit < 1 || limit > JOB_MAX_LIMIT) {
+    return res.status(400).json({ error: `limit must be an integer between 1 and ${JOB_MAX_LIMIT}.` });
+  }
+  // Scheduler auth: constant-time compared shared secret. Unset CRON_SECRET
+  // (the default) disables this path entirely — then only staff can run jobs.
+  const cronSecret = process.env.CRON_SECRET;
+  const cronHeader = req.headers['x-cron-secret'];
+  let tenantIds = null;
+  if (cronSecret && typeof cronHeader === 'string' && cronHeader.length === cronSecret.length) {
+    if (crypto.timingSafeEqual(Buffer.from(cronHeader), Buffer.from(cronSecret))) {
+      tenantIds = db.tenants.map((t) => t.id);
+    }
+  }
+  if (tenantIds === null) {
+    const s = staff(req);
+    if (!s) return res.status(401).json({ error: 'Please sign in.' });
+    const t = tid(req);
+    tenantIds = t === null ? db.tenants.map((x) => x.id) : [t];
+  }
+  try {
+    res.json(await runReminderJob({ type, dryRun, days, limit, tenantIds }));
+  } catch (e) {
+    console.error('[jobs/run] failed:', String(e.message || e).slice(0, 200));
+    return res.status(500).json({ error: 'The reminder job failed to complete. No further messages were sent.' });
   }
 });
+
 
 // ---- Generic CRUD (tenant-scoped) ----
 TABLES.forEach((t) => {
@@ -687,20 +994,58 @@ router.post('/reviews/public', (req, res) => {
 });
 
 // ---- Patient portal (tenant 1) ----
-// NOTE (demo): portal auth is phone-number-only by design for the demo build.
-// Before any real deployment this MUST be hardened (OTP verification via an SMS
-// provider, or a password/PIN) — a phone number alone must never grant access
-// to clinical records.
-router.post('/portal/login', (req, res) => {
-  const rawPhone = String((req.body || {}).phone || '').trim();
-  const normalizedPhone = normalizePhone(rawPhone);
-  const patient = sc(db.patients, PUBLIC_TENANT)
-    .find((p) => p.phone === rawPhone || (normalizedPhone && p.phone === normalizedPhone));
-  if (!patient) return res.status(404).json({ error: 'No account found with this phone number. Please register.' });
+// Portal auth is OTP-based: the phone number alone must never grant access to
+// clinical records. See docs/OTP-AUTH.md for the design and the known blocker
+// around real SMS delivery (DLT-registered template required in India).
+
+// ---- Portal OTP machinery (in-memory, single instance) ----
+const OTP_TTL_MS = Number(process.env.OTP_TTL_MS) || 5 * 60 * 1000;        // code lifetime
+const OTP_RESEND_MS = Number(process.env.OTP_RESEND_MS) || 60 * 1000;      // min gap between sends per phone
+const OTP_MAX_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS) || 5;        // wrong entries per code
+const OTP_REQUEST_LIMIT = Number(process.env.OTP_REQUEST_LIMIT) || 5;     // sends per phone per window
+const OTP_IP_LIMIT = Number(process.env.OTP_IP_LIMIT) || 15;              // sends per IP per window
+const OTP_VERIFY_IP_LIMIT = Number(process.env.OTP_VERIFY_IP_LIMIT) || 30; // verifies per IP per window
+const OTP_WINDOW_MS = Number(process.env.OTP_WINDOW_MS) || 10 * 60 * 1000;
+
+// The pepper is never written to disk: OTP records are in-memory only, so a
+// per-process random fallback is safe (and OTPs die with the process anyway).
+const OTP_PEPPER = process.env.OTP_PEPPER || crypto.randomBytes(32).toString('hex');
+
+const PORTAL_OTPS = {};   // phone -> { codeHash, expiresAt, attempts, sentAt }
+const OTP_REQUESTS = {}; // rate-limit counters: '<kind>:<key>' -> { count, windowStart }
+
+function otpRateLimited(kind, key, limit) {
+  const now = Date.now();
+  const k = kind + ':' + key;
+  const rec = OTP_REQUESTS[k];
+  if (!rec || now - rec.windowStart > OTP_WINDOW_MS) {
+    OTP_REQUESTS[k] = { count: 1, windowStart: now };
+    return false;
+  }
+  rec.count += 1;
+  return rec.count > limit;
+}
+
+function otpClearRates(phone, ip) {
+  delete OTP_REQUESTS['phone:' + phone];
+  delete OTP_REQUESTS['ip:' + ip];
+}
+
+function hashOtp(phone, code) {
+  return crypto.createHash('sha256').update(code + ':' + phone + ':' + OTP_PEPPER).digest();
+}
+
+function otpEqual(phone, code, codeHash) {
+  const a = hashOtp(phone, code);
+  const b = Buffer.from(codeHash);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function portalPayload(patient) {
   const dName = (id) => { const d = sc(db.dentists, PUBLIC_TENANT).find((x) => x.id === Number(id)); return d ? d.name : '—'; };
   // Clinical notes are internal — do not expose them through the portal.
   const { notes, ...safePatient } = patient;
-  res.json({
+  return {
     patient: safePatient,
     appointments: sc(db.appointments, PUBLIC_TENANT)
       .filter((a) => a.patientId === patient.id)
@@ -708,9 +1053,141 @@ router.post('/portal/login', (req, res) => {
     treatmentPlans: sc(db.treatmentPlans, PUBLIC_TENANT).filter((tp) => tp.patientId === patient.id),
     invoices: sc(db.invoices, PUBLIC_TENANT).filter((i) => i.patientId === patient.id),
     recalls: sc(db.recall || [], PUBLIC_TENANT).filter((r) => String(r.patientId) === String(patient.id) || r.phone === patient.phone)
-  });
+  };
+}
+
+// ---- SMS delivery (production) ----
+// Only MSG91 is wired (the connector shape in docs/INTEGRATIONS.md). Delivery
+// needs authKey + senderId + a DLT-registered OTP templateId; without them the
+// endpoint refuses to send (503) and never leaks the code in the response.
+async function sendOtpSms(phone, code) {
+  const tenant = db.tenants.find((t) => String(t.id) === String(PUBLIC_TENANT));
+  const cfg = (tenant && tenant.integrations && tenant.integrations.sms && tenant.integrations.sms.config) || {};
+  if (!cfg.authKey || !cfg.senderId || !cfg.templateId) {
+    return { sent: false, status: 503, error: 'SMS delivery is not configured yet. The clinic must add an SMS gateway (auth key, sender ID and a DLT-registered OTP template) under Admin → Integrations. Portal login is unavailable until then.' };
+  }
+  try {
+    const response = await fetch('https://api.msg91.com/api/v5/flow', {
+      method: 'POST',
+      headers: { authkey: cfg.authKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        template_id: cfg.templateId,
+        short_url: '0',
+        recipients: [{ mobiles: '91' + phone, VAR: code, VAR1: code, VAR2: code }]
+      })
+    });
+    if (!response.ok) {
+      console.error('[otp] SMS gateway rejected the send with HTTP', response.status);
+      return { sent: false, status: 502, error: 'The SMS gateway rejected the request. Please try again in a moment.' };
+    }
+    return { sent: true };
+  } catch (e) {
+    console.error('[otp] SMS gateway unreachable:', e.message);
+    return { sent: false, status: 502, error: 'The SMS gateway could not be reached. Please try again in a moment.' };
+  }
+}
+
+// Step 1: request a code for a registered phone.
+router.post('/portal/otp/request', async (req, res) => {
+  const rawPhone = String((req.body || {}).phone || '').trim();
+  const phone = normalizePhone(rawPhone);
+  if (!phone) return res.status(400).json({ error: 'Please enter a valid 10-digit Indian mobile number.' });
+  const ip = req.ip || 'unknown';
+
+  if (otpRateLimited('ip', ip, OTP_IP_LIMIT)) {
+    return res.status(429).json({ error: 'Too many verification requests from this network. Please wait a few minutes.' });
+  }
+  if (otpRateLimited('phone', phone, OTP_REQUEST_LIMIT)) {
+    return res.status(429).json({ error: 'Too many codes requested for this number. Please wait a few minutes.' });
+  }
+
+  const existing = PORTAL_OTPS[phone];
+  if (existing && !existing.consumed && Date.now() - existing.sentAt < OTP_RESEND_MS) {
+    return res.status(429).json({ error: 'A code was just sent. Please wait before requesting another one.' });
+  }
+
+  const patient = sc(db.patients, PUBLIC_TENANT).find((p) => p.phone === phone);
+  if (!patient) return res.status(404).json({ error: 'No account found with this phone number. Please register.' });
+
+  const code = String(crypto.randomInt(100000, 1000000)); // 6-digit, crypto-random
+
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (isProduction) {
+    const result = await sendOtpSms(phone, code);
+    if (!result.sent) return res.status(result.status).json({ error: result.error });
+  }
+  // Store only after delivery succeeded (or in dev/demo, where the code is
+  // returned to the caller below on purpose so the flow is testable).
+  PORTAL_OTPS[phone] = {
+    codeHash: hashOtp(phone, code),
+    expiresAt: Date.now() + OTP_TTL_MS,
+    attempts: 0,
+    sentAt: Date.now(),
+    consumed: false
+  };
+
+  const body = {
+    ok: true,
+    channel: isProduction ? 'sms' : 'dev',
+    expiresInSec: Math.round(OTP_TTL_MS / 1000),
+    resendInSec: Math.round(OTP_RESEND_MS / 1000)
+  };
+  // NEVER in production: exposing the code in the response would defeat the OTP.
+  // In dev/demo builds there is no real SMS transport, so the code is returned
+  // for the same flow to be fully testable (and mirrored by api-demo.js).
+  if (!isProduction) body.devCode = code;
+  res.json(body);
 });
 
+// Step 2: verify the code; on success returns the full portal payload.
+router.post('/portal/otp/verify', (req, res) => {
+  const rawPhone = String((req.body || {}).phone || '').trim();
+  const phone = normalizePhone(rawPhone);
+  const code = String((req.body || {}).code || '').trim();
+  if (!phone) return res.status(400).json({ error: 'Please enter a valid 10-digit Indian mobile number.' });
+  if (!/^\d{6}$/.test(code)) return res.status(400).json({ error: 'Please enter the 6-digit code from your SMS.' });
+  if (otpRateLimited('verify', req.ip || 'unknown', OTP_VERIFY_IP_LIMIT)) {
+    return res.status(429).json({ error: 'Too many verification attempts from this network. Please wait a few minutes.' });
+  }
+
+  const otp = PORTAL_OTPS[phone];
+  const dead = !otp || otp.consumed || Date.now() > otp.expiresAt;
+  if (dead) {
+    delete PORTAL_OTPS[phone];
+    return res.status(401).json({ error: 'This code has expired or was already used. Please request a new one.' });
+  }
+  if (otp.attempts >= OTP_MAX_ATTEMPTS) {
+    delete PORTAL_OTPS[phone];
+    return res.status(429).json({ error: 'Too many incorrect attempts. Please request a new code.' });
+  }
+  if (!otpEqual(phone, code, otp.codeHash)) {
+    otp.attempts += 1;
+    const left = OTP_MAX_ATTEMPTS - otp.attempts;
+    if (left <= 0) {
+      delete PORTAL_OTPS[phone];
+      return res.status(429).json({ error: 'Too many incorrect attempts. Please request a new code.' });
+    }
+    return res.status(401).json({ error: 'Incorrect code. ' + left + ' attempt' + (left === 1 ? '' : 's') + ' left.' });
+  }
+
+  // One-time use: burn the code immediately after a successful verify.
+  delete PORTAL_OTPS[phone];
+  otpClearRates(phone, req.ip || 'unknown');
+
+  const patient = sc(db.patients, PUBLIC_TENANT).find((p) => p.phone === phone);
+  if (!patient) return res.status(404).json({ error: 'No account found with this phone number. Please register.' });
+  res.json(portalPayload(patient));
+});
+
+// Phone-only login is retired: it granted access to clinical records with
+// nothing but a phone number. Old clients get an explicit, actionable error.
+router.post('/portal/login', (_req, res) => {
+  res.status(410).json({ error: 'Phone-only login is disabled. Request a verification code with /portal/otp/request, then verify with /portal/otp/verify.' });
+});
+
+// Registration still only creates the profile; the patient must then verify
+// via OTP before any records are shown (the client drives them to the verify
+// step automatically).
 router.post('/portal/register', (req, res) => {
   const { name, phone, email, age, gender } = req.body || {};
   if (!name || !phone) return res.status(400).json({ error: 'Name and phone are required.' });
@@ -730,4 +1207,6 @@ router.post('/portal/register', (req, res) => {
   res.json({ patient });
 });
 
-module.exports = { router };
+// runReminderJob is exported so an in-process scheduler (or a script that
+// shares this DB) can run jobs without going through HTTP.
+module.exports = { router, runReminderJob };

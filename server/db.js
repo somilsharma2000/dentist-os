@@ -1,7 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, 'db.json');
+// DENTOS_DB_PATH lets tests / multi-instance deploys point the JSON DB
+// somewhere else without touching the repo's server/db.json.
+const DB_PATH = process.env.DENTOS_DB_PATH || path.join(__dirname, 'db.json');
 
 let db = null;
 

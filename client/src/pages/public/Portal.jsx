@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { formatDate, formatINR, todayISO } from '../../lib/utils';
@@ -15,7 +15,7 @@ import {
   Avatar,
   EmptyState
 } from '../../components/ui';
-import { LogOut, Calendar, FileText, Receipt, User, Bell, Phone, ArrowRight } from 'lucide-react';
+import { LogOut, Calendar, FileText, Receipt, User, Bell, Phone, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export default function Portal() {
   const navigate = useNavigate();
@@ -23,6 +23,12 @@ export default function Portal() {
   const [loginError, setLoginError] = useState('');
   const [showRegister, setShowRegister] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Two-step OTP login: 'phone' -> enter number, 'code' -> enter the 6-digit code
+  const [otpStep, setOtpStep] = useState('phone');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpInfo, setOtpInfo] = useState(null); // { channel, expiresInSec, resendInSec, devCode? }
+  const [resendIn, setResendIn] = useState(0);
 
   // Portal session data
   const [portalData, setPortalData] = useState(null);
@@ -37,24 +43,70 @@ export default function Portal() {
   });
   const [regError, setRegError] = useState('');
 
+  // Resend-cooldown countdown (seconds)
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
+
+  const requestOtp = async (targetPhone) => {
+    const data = await api.post('/portal/otp/request', { phone: targetPhone });
+    setOtpInfo(data);
+    setOtpStep('code');
+    setOtpCode('');
+    setResendIn(data.resendInSec || 60);
+  };
+
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setLoginError('');
-    if (!phone.trim()) {
-      setLoginError('Please enter your phone number.');
+    const raw = phone.trim();
+    if (!/^[6-9][0-9]{9}$/.test(raw)) {
+      setLoginError('Please enter a valid 10-digit Indian mobile number.');
       return;
     }
 
     try {
       setLoading(true);
-      const data = await api.post('/portal/login', { phone: phone.trim() });
-      setPortalData(data);
+      await requestOtp(raw);
     } catch (err) {
-      const msg = err.message || 'Failed to login.';
+      const msg = err.message || 'Failed to send the verification code.';
       setLoginError(msg);
       if (msg.toLowerCase().includes('register') || msg.toLowerCase().includes('no account')) {
-        setRegForm((prev) => ({ ...prev, phone: phone.trim() }));
+        setRegForm((prev) => ({ ...prev, phone: raw }));
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifySubmit = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    if (!/^\d{6}$/.test(otpCode.trim())) {
+      setLoginError('Please enter the 6-digit code we sent you.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const data = await api.post('/portal/otp/verify', { phone: phone.trim(), code: otpCode.trim() });
+      setPortalData(data);
+    } catch (err) {
+      setLoginError(err.message || 'Verification failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setLoginError('');
+    try {
+      setLoading(true);
+      await requestOtp(phone.trim());
+    } catch (err) {
+      setLoginError(err.message || 'Failed to resend the code.');
     } finally {
       setLoading(false);
     }
@@ -67,6 +119,10 @@ export default function Portal() {
       setRegError('Name and Phone number are required.');
       return;
     }
+    if (!/^[6-9][0-9]{9}$/.test(regForm.phone.trim())) {
+      setRegError('Please enter a valid 10-digit Indian mobile number.');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -77,11 +133,10 @@ export default function Portal() {
         age: regForm.age ? Number(regForm.age) : undefined,
         gender: regForm.gender
       });
-
-      // Auto login after registration
-      const data = await api.post('/portal/login', { phone: regForm.phone.trim() });
-      setPortalData(data);
+      // Profile created — now verify the phone with an OTP before showing records.
+      setPhone(regForm.phone.trim());
       setShowRegister(false);
+      await requestOtp(regForm.phone.trim());
     } catch (err) {
       setRegError(err.message || 'Registration failed. Please try again.');
     } finally {
@@ -94,6 +149,10 @@ export default function Portal() {
     setPhone('');
     setLoginError('');
     setShowRegister(false);
+    setOtpStep('phone');
+    setOtpCode('');
+    setOtpInfo(null);
+    setResendIn(0);
   };
 
   // LOGGED IN VIEW
@@ -275,23 +334,37 @@ export default function Portal() {
     <div className="mx-auto max-w-md px-4 py-16">
       <Card className="p-6 md:p-8 space-y-6">
         {!showRegister ? (
-          /* LOGIN FORM */
+          /* OTP LOGIN FORM (two steps) */
           <div className="space-y-6">
             <div className="text-center space-y-1">
               <h1 className="text-2xl font-bold">Patient Portal</h1>
               <p className="text-xs text-muted-foreground">
-                Enter your registered phone number to access your appointments and records.
+                {otpStep === 'phone'
+                  ? 'Enter your registered mobile number — we will send you a one-time verification code.'
+                  : `Enter the 6-digit code sent to ${phone}. It expires in ${otpInfo?.expiresInSec ? Math.round(otpInfo.expiresInSec / 60) : 5} minutes.`}
               </p>
             </div>
+
+            {otpInfo?.devCode && (
+              <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-700 flex items-start gap-2">
+                <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" />
+                <p>
+                  <span className="font-bold">Demo / dev mode:</span> there is no real SMS here, so your
+                  verification code is <span className="font-bold tracking-widest">{otpInfo.devCode}</span>.
+                  Production servers send it by SMS and never show it on screen.
+                </p>
+              </div>
+            )}
 
             {loginError && (
               <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-600 space-y-2">
                 <p>{loginError}</p>
-                {(loginError.toLowerCase().includes('register') || loginError.toLowerCase().includes('no account')) && (
+                {otpStep === 'phone' && (loginError.toLowerCase().includes('register') || loginError.toLowerCase().includes('no account')) && (
                   <button
                     type="button"
                     onClick={() => {
                       setShowRegister(true);
+                      setLoginError('');
                       setRegError('');
                     }}
                     className="text-xs font-bold underline hover:text-red-800"
@@ -302,32 +375,87 @@ export default function Portal() {
               </div>
             )}
 
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Phone Number</label>
-                <Input
-                  type="tel"
-                  placeholder="Enter your phone number"
-                  value={phone}
-                  onChange={(e) => {
-                    setPhone(e.target.value);
-                    setLoginError('');
-                  }}
-                  required
-                />
-              </div>
+            {otpStep === 'phone' ? (
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Phone Number</label>
+                  <Input
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="10-digit mobile number"
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      setLoginError('');
+                    }}
+                    required
+                  />
+                </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Checking...' : 'Continue'}
-              </Button>
-            </form>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Sending code...' : 'Send Verification Code'}
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifySubmit} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Verification Code</label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="6-digit code"
+                    value={otpCode}
+                    onChange={(e) => {
+                      setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                      setLoginError('');
+                    }}
+                    className="text-center text-lg tracking-[0.5em]"
+                    autoFocus
+                    required
+                  />
+                </div>
+
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Verifying...' : 'Verify & Sign In'}
+                </Button>
+
+                <div className="flex items-center justify-between text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtpStep('phone');
+                      setOtpCode('');
+                      setOtpInfo(null);
+                      setLoginError('');
+                      setResendIn(0);
+                    }}
+                    className="font-semibold text-muted-foreground hover:text-foreground"
+                  >
+                    ← Use a different number
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={loading || resendIn > 0}
+                    className="font-semibold text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+                  >
+                    {resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
+                  </button>
+                </div>
+              </form>
+            )}
 
             <div className="text-center pt-2 border-t border-border/60">
               <p className="text-xs text-muted-foreground">
                 First time visiting?{' '}
                 <button
                   type="button"
-                  onClick={() => setShowRegister(true)}
+                  onClick={() => {
+                    setShowRegister(true);
+                    setLoginError('');
+                    setRegError('');
+                  }}
                   className="font-semibold text-primary hover:underline"
                 >
                   Register as a new patient
@@ -340,7 +468,7 @@ export default function Portal() {
           <div className="space-y-6">
             <div className="text-center space-y-1">
               <h1 className="text-2xl font-bold">Patient Registration</h1>
-              <p className="text-xs text-muted-foreground">Create your patient profile with SmileCraft.</p>
+              <p className="text-xs text-muted-foreground">Create your patient profile, then verify your mobile number with a one-time code.</p>
             </div>
 
             {regError && (
@@ -407,7 +535,7 @@ export default function Portal() {
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Registering...' : 'Register & Log In'}
+                {loading ? 'Registering...' : 'Register & Verify Phone'}
               </Button>
             </form>
 

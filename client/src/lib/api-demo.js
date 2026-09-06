@@ -334,13 +334,31 @@ function publicReview(body) {
   return { ok: true, review: clone(review) };
 }
 
-function portalLogin(body) {
-  const rawPhone = String((body || {}).phone || '').trim();
-  const normalizedPhone = normalizePhone(rawPhone);
-  const patient = sc(db.patients, PUBLIC_TENANT)
-    .find((p) => p.phone === rawPhone || (normalizedPhone && p.phone === normalizedPhone));
-  if (!patient) throw err(404, 'No account found with this phone number. Please register.');
-  // Clinical notes are internal — do not expose them through the portal.
+// ---- Portal OTP auth (mirrors server/api.js) ----
+// In the browser demo there is no SMS transport: the code is returned in the
+// response (channel 'demo') and the UI shows it in a clearly-labelled banner.
+// Production servers never return the code — see docs/OTP-AUTH.md.
+const OTP_TTL_MS = 5 * 60 * 1000;
+const OTP_RESEND_MS = 60 * 1000;
+const OTP_MAX_ATTEMPTS = 5;
+const OTP_REQUEST_LIMIT = 5;
+const OTP_WINDOW_MS = 10 * 60 * 1000;
+const PORTAL_OTPS = {};   // phone -> { code, expiresAt, attempts, sentAt }
+const OTP_REQUESTS = {}; // 'phone:<n>' / 'ip:demo' -> { count, windowStart }
+
+function otpRateLimited(kind, key, limit) {
+  const now = Date.now();
+  const k = kind + ':' + key;
+  const rec = OTP_REQUESTS[k];
+  if (!rec || now - rec.windowStart > OTP_WINDOW_MS) {
+    OTP_REQUESTS[k] = { count: 1, windowStart: now };
+    return false;
+  }
+  rec.count += 1;
+  return rec.count > limit;
+}
+
+function portalPayload(patient) {
   const { notes, ...safePatient } = patient;
   return {
     patient: clone(safePatient),
@@ -351,6 +369,58 @@ function portalLogin(body) {
     invoices: clone(sc(db.invoices, PUBLIC_TENANT).filter((i) => i.patientId === patient.id)),
     recalls: clone(sc(db.recall || [], PUBLIC_TENANT).filter((r) => String(r.patientId) === String(patient.id) || r.phone === patient.phone))
   };
+}
+
+function portalOtpRequest(body) {
+  const phone = normalizePhone(String((body || {}).phone || '').trim());
+  if (!phone) throw err(400, 'Please enter a valid 10-digit Indian mobile number.');
+  if (otpRateLimited('ip', 'demo', 15)) throw err(429, 'Too many verification requests. Please wait a few minutes.');
+  if (otpRateLimited('phone', phone, OTP_REQUEST_LIMIT)) throw err(429, 'Too many codes requested for this number. Please wait a few minutes.');
+  const existing = PORTAL_OTPS[phone];
+  if (existing && Date.now() - existing.sentAt < OTP_RESEND_MS) {
+    throw err(429, 'A code was just sent. Please wait before requesting another one.');
+  }
+  const patient = sc(db.patients, PUBLIC_TENANT).find((p) => p.phone === phone);
+  if (!patient) throw err(404, 'No account found with this phone number. Please register.');
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  PORTAL_OTPS[phone] = { code, expiresAt: Date.now() + OTP_TTL_MS, attempts: 0, sentAt: Date.now() };
+  return {
+    ok: true,
+    channel: 'demo',
+    expiresInSec: Math.round(OTP_TTL_MS / 1000),
+    resendInSec: Math.round(OTP_RESEND_MS / 1000),
+    demoCode: code
+  };
+}
+
+function portalOtpVerify(body) {
+  const phone = normalizePhone(String((body || {}).phone || '').trim());
+  const code = String((body || {}).code || '').trim();
+  if (!phone) throw err(400, 'Please enter a valid 10-digit Indian mobile number.');
+  if (!/^\d{6}$/.test(code)) throw err(400, 'Please enter the 6-digit code from your SMS.');
+  const otp = PORTAL_OTPS[phone];
+  if (!otp || Date.now() > otp.expiresAt) {
+    delete PORTAL_OTPS[phone];
+    throw err(401, 'This code has expired or was already used. Please request a new one.');
+  }
+  if (otp.attempts >= OTP_MAX_ATTEMPTS) {
+    delete PORTAL_OTPS[phone];
+    throw err(429, 'Too many incorrect attempts. Please request a new code.');
+  }
+  if (otp.code !== code) {
+    otp.attempts += 1;
+    const left = OTP_MAX_ATTEMPTS - otp.attempts;
+    if (left <= 0) {
+      delete PORTAL_OTPS[phone];
+      throw err(429, 'Too many incorrect attempts. Please request a new code.');
+    }
+    throw err(401, 'Incorrect code. ' + left + ' attempt' + (left === 1 ? '' : 's') + ' left.');
+  }
+  // One-time use: burn the code immediately after a successful verify.
+  delete PORTAL_OTPS[phone];
+  const patient = sc(db.patients, PUBLIC_TENANT).find((p) => p.phone === phone);
+  if (!patient) throw err(404, 'No account found with this phone number. Please register.');
+  return portalPayload(patient);
 }
 
 function portalRegister(body) {
@@ -440,17 +510,65 @@ function routeGet(path) {
   throw err(404, 'Not found: ' + p);
 }
 
+// Approved-template validation — mirrors server/api.js templateRequestError()
+// (Meta Cloud API templates: exact approved name, language code, components).
+const TEMPLATE_NAME_RE = /^[A-Za-z0-9_]{1,60}$/;
+const TEMPLATE_LANG_RE = /^[A-Za-z0-9_-]{2,20}$/;
+const TEMPLATE_COMPONENT_TYPES = new Set(['header', 'body', 'button']);
+
+function templateRequestError(template) {
+  if (!template || typeof template !== 'object' || Array.isArray(template)) {
+    return 'template must be an object: { name, language?, components? }.';
+  }
+  if (!TEMPLATE_NAME_RE.test(String(template.name || ''))) {
+    return 'Invalid template name. Use the exact name of a Meta-approved template (letters, numbers, underscores).';
+  }
+  const language = template.language === undefined || template.language === null ? 'en' : String(template.language);
+  if (!TEMPLATE_LANG_RE.test(language)) {
+    return 'Invalid template language code (e.g. "en", "en_US", "hi").';
+  }
+  if (template.components !== undefined && template.components !== null) {
+    if (!Array.isArray(template.components) || template.components.length > 10) {
+      return 'template.components must be an array of at most 10 items.';
+    }
+    for (const c of template.components) {
+      if (!c || typeof c !== 'object' || Array.isArray(c) || !TEMPLATE_COMPONENT_TYPES.has(String(c.type || ''))) {
+        return 'Each template component needs a valid type: header, body or button.';
+      }
+    }
+  }
+  if (JSON.stringify(template).length > 4096) return 'Template payload is too large.';
+  return null;
+}
+
+// WhatsApp send — mirrors server/api.js /whatsapp/send exactly (free-form text
+// or Meta-approved template), except sends are simulated in demo mode: the demo
+// never performs real network sends.
 function sendWhatsApp(body) {
-  const { phone, patientId, text, category = 'utility' } = body || {};
+  const { phone, patientId, text, template, category = 'utility' } = body || {};
   const normalizedPhone = normalizePhone(phone);
-  if (!normalizedPhone || typeof text !== 'string' || !text.trim()) throw err(400, 'A valid Indian phone number and message are required.');
-  if (text.length > 4096) throw err(400, 'Message is too long.');
+  const templateMode = template !== undefined && template !== null;
+  if (!normalizedPhone) throw err(400, 'A valid 10-digit Indian mobile number is required.');
+  if (templateMode && typeof text === 'string' && text.trim()) throw err(400, 'Send either free-form text or an approved template, not both.');
+  if (templateMode) {
+    const terr = templateRequestError(template);
+    if (terr) throw err(400, terr);
+  } else {
+    if (typeof text !== 'string' || !text.trim()) throw err(400, 'A message or an approved template is required.');
+    if (text.length > 4096) throw err(400, 'Message is too long.');
+  }
   if (!['utility', 'marketing'].includes(category)) throw err(400, 'Invalid message category.');
   const patient = sc(db.patients, PUBLIC_TENANT).find((p) => p.phone === normalizedPhone || (patientId && String(p.id) === String(patientId)));
   const consent = (db.consentLogs || []).find((c) => String(c.tenantId || PUBLIC_TENANT) === String(PUBLIC_TENANT) && patient && String(c.patientId) === String(patient.id) && c.scope === (category === 'utility' ? 'service' : 'marketing'));
   if (!consent) throw err(403, `No ${category} consent is on file for this number.`);
   db.whatsappMessages = db.whatsappMessages || [];
-  const message = { id: nextId(), tenantId: PUBLIC_TENANT, patientId: patient?.id || null, phone: patient?.phone || normalizedPhone, direction: 'out', category, text: text.trim(), consentId: consent.id, status: 'simulated', createdAt: new Date().toISOString() };
+  const message = {
+    id: nextId(), tenantId: PUBLIC_TENANT, patientId: patient?.id || null, phone: patient?.phone || normalizedPhone, direction: 'out',
+    type: templateMode ? 'template' : 'text', category,
+    text: templateMode ? null : text.trim(),
+    ...(templateMode ? { templateName: String(template.name), templateLanguage: String(template.language || 'en'), templateComponents: template.components || [] } : {}),
+    consentId: consent.id, status: 'simulated', createdAt: new Date().toISOString()
+  };
   db.whatsappMessages.push(message); persist();
   return { message: clone(message), simulated: true };
 }
@@ -460,7 +578,9 @@ function routePost(path, body) {
   if (path === '/auth/logout') return { ok: true };
   if (path === '/bookings') return createBooking(body);
   if (path === '/reviews/public') return publicReview(body);
-  if (path === '/portal/login') return portalLogin(body);
+  if (path === '/portal/login') throw err(410, 'Phone-only login is disabled. Request a verification code with /portal/otp/request, then verify with /portal/otp/verify.');
+  if (path === '/portal/otp/request') return portalOtpRequest(body);
+  if (path === '/portal/otp/verify') return portalOtpVerify(body);
   if (path === '/whatsapp/send') return sendWhatsApp(body);
   if (path === '/portal/register') return portalRegister(body);
 
