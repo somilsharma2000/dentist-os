@@ -58,6 +58,7 @@ export default function App() {
         <Route path="/terms" element={<Legal />} />
         <Route path="/grievance" element={<Legal />} />
         <Route path="/consent" element={<Legal />} />
+        <Route path="/cookies" element={<Legal />} />
         <Route path="/data-rights" element={<DataRights />} />
       </Route>
       <Route path="/admin" element={<RequireStaff><AdminLayout /></RequireStaff>}>

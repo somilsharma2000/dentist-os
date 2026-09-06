@@ -95,6 +95,7 @@ export default function PublicLayout() {
               <li><Link className="hover:text-primary" to="/terms">Terms of Use</Link></li>
               <li><Link className="hover:text-primary" to="/grievance">Privacy & Grievance</Link></li>
               <li><Link className="hover:text-primary" to="/data-rights">Data Rights</Link></li>
+              <li><Link className="hover:text-primary" to="/cookies">Cookies</Link></li>
             </ul>
           </div>
           <div>

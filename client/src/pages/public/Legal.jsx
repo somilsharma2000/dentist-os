@@ -42,6 +42,12 @@ export default function Legal() {
     <Section title="How complaints are handled"><p>The clinic should acknowledge complaints, record the decision, explain any refusal or retention requirement, and provide an escalation route. This page is a configurable product template and must be completed with the clinic’s approved process.</p></Section>
   </LegalShell>;
 
+  if (pathname === '/cookies') return <LegalShell title="Cookie and Analytics Notice" eyebrow="Website technology notice" settings={settings}>
+    <Section title="Current use"><p>This deployment does not intentionally use advertising pixels, session replay, or non-essential analytics in the patient portal. The demo deployment may use browser local storage to preserve demo data.</p></Section>
+    <Section title="Necessary storage"><p>Authentication, security, language, and demo-mode storage may be necessary for the website to function. Clinic operators must update this notice if they add analytics, marketing tags, payment tools, or other tracking technologies.</p></Section>
+    <Section title="Changes"><p>Any non-essential analytics or tracking should be documented, disclosed, and configured only after the clinic approves the applicable consent and privacy process.</p></Section>
+  </LegalShell>;
+
   if (pathname === '/consent') return <LegalShell title="Consent and Patient Information" eyebrow="Clinic consent information" settings={settings}>
     <Section title="Service communications"><p>The clinic may use the information you provide to manage appointments, provide requested care, issue invoices, respond to support requests, and send essential service communications. The booking screen records the notice version and your service-consent decision.</p></Section>
     <Section title="Optional marketing communications"><p>Marketing messages are optional and separate from service consent. You can withdraw marketing consent or reply STOP to supported WhatsApp messages. Withdrawing marketing consent does not cancel care or essential appointment messages.</p></Section>
