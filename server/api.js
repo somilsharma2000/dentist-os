@@ -399,6 +399,25 @@ router.post('/whatsapp/send', async (req, res) => {
   if (tenantId === null) return res.status(400).json({ error: 'Pick a clinic first.' });
   const patient = sc(db.patients, tenantId).find((p) => p.phone === normalizedPhone || (patientId && String(p.id) === String(patientId)));
   const phoneForSend = patient?.phone || normalizedPhone;
+  // Build the Meta Cloud API payload from the request (free-form text or an
+  // approved template). This used to reference an undefined `payload` variable,
+  // which crashed every send with a ReferenceError (500).
+  const templateLanguage = template?.language === undefined || template?.language === null
+    ? DEFAULT_TEMPLATE_LANGUAGE
+    : String(template.language);
+  const payload = templateMode
+    ? {
+        messaging_product: 'whatsapp',
+        type: 'template',
+        template: {
+          name: String(template.name),
+          language: { code: templateLanguage },
+          ...(Array.isArray(template.components) && template.components.length
+            ? { components: template.components }
+            : {})
+        }
+      }
+    : { messaging_product: 'whatsapp', type: 'text', text: { preview_url: false, body: text } };
   // Consent gate + provider dispatch live in deliverWhatsApp (shared with the
   // scheduler-ready reminder job below) so both paths enforce identical rules.
   const result = await deliverWhatsApp({ tenantId, patient, phone: phoneForSend, category, payload });
