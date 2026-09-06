@@ -115,6 +115,24 @@ function stripSecrets(u) {
   return rest;
 }
 
+function safeTenant(t) {
+  if (!t) return t;
+  return { ...t, integrations: maskIntegrations(t.integrations) };
+}
+
+const PUBLIC_RATE = {};
+function publicRateLimited(req, bucket, limit, windowMs = 10 * 60 * 1000) {
+  const key = `${bucket}:${req.ip || 'unknown'}`;
+  const now = Date.now();
+  const rec = PUBLIC_RATE[key];
+  if (!rec || now - rec.windowStart > windowMs) {
+    PUBLIC_RATE[key] = { count: 1, windowStart: now };
+    return false;
+  }
+  rec.count += 1;
+  return rec.count > limit;
+}
+
 function newToken() {
   return 'tok_' + crypto.randomBytes(24).toString('hex');
 }
@@ -177,7 +195,7 @@ router.post('/auth/login', (req, res) => {
     staff: stripSecrets(user), tenant, viewTenantId: null,
     expiresAt: Date.now() + SESSION_TTL_MS
   };
-  res.json({ staff: stripSecrets(user), tenant, token });
+  res.json({ staff: stripSecrets(user), tenant: safeTenant(tenant), token });
 });
 
 router.post('/auth/logout', (req, res) => {
@@ -190,7 +208,7 @@ router.post('/auth/logout', (req, res) => {
 router.get('/auth/me', (req, res) => {
   const s = staff(req);
   if (!s) return res.status(401).json({ error: 'Please sign in.' });
-  res.json({ staff: s.staff, tenant: s.tenant || null, viewTenantId: s.viewTenantId || null });
+  res.json({ staff: s.staff, tenant: safeTenant(s.tenant), viewTenantId: s.viewTenantId || null });
 });
 
 // Super-admin tenant switching
@@ -711,7 +729,7 @@ TABLES.forEach((t) => {
       return res.status(403).json({ error: 'Agency owner access only.' });
     }
     if (t === 'staff') return res.json(sc(db.staff, tid(req)).map(stripSecrets));
-    if (t === 'tenants') return res.json(db.tenants);
+    if (t === 'tenants') return res.json(db.tenants.map(safeTenant));
     res.json(sc(db[t], tid(req)));
   });
 
@@ -994,6 +1012,9 @@ router.post('/bookings', (req, res) => {
 
 router.post('/reviews/public', (req, res) => {
   const { name, phone, rating, text } = req.body || {};
+  if (publicRateLimited(req, 'review', 10)) {
+    return res.status(429).json({ error: 'Too many reviews from this network. Please try again later.' });
+  }
   if (!name || !rating || !text) {
     return res.status(400).json({ error: 'Name, rating and review text are required.' });
   }
@@ -1154,7 +1175,7 @@ router.post('/portal/otp/request', async (req, res) => {
   // NEVER in production: exposing the code in the response would defeat the OTP.
   // In dev/demo builds there is no real SMS transport, so the code is returned
   // for the same flow to be fully testable (and mirrored by api-demo.js).
-  if (!isProduction) body.devCode = code;
+  if (!isProduction && process.env.ALLOW_DEV_OTP === 'true') body.devCode = code;
   res.json(body);
 });
 

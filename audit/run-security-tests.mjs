@@ -68,7 +68,7 @@ async function main() {
     record('tenant-1 admin can log in', admin.status === 200 && !!admin.json.token, admin.status);
     const tok = admin.json?.token;
 
-    const agency = await api('POST', '/auth/login', { body: { email: 'agency@dentos.com', password: 'agency123' } });
+    const agency = await api('POST', '/auth/login', { body: { email: 'agency@dentos.app', password: 'agency123' } });
     const superTok = agency.json?.token;
     record('super admin can log in', agency.status === 200 && agency.json?.staff?.role === 'super');
 
@@ -81,7 +81,7 @@ async function main() {
     // rate limit: hammer login 12x with wrong password
     let last = 0;
     for (let i = 0; i < 12; i++) {
-      const r = await api('POST', '/auth/login', { body: { email: `rl${i}@x.com`, password: 'x' } });
+      const r = await api('POST', '/auth/login', { body: { email: 'rl@x.com', password: 'x' } });
       last = r.status;
     }
     record('login rate limit kicks in (429)', last === 429, 'last=' + last);
