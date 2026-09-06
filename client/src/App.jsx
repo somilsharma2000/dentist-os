@@ -11,6 +11,8 @@ import Reviews from './pages/public/Reviews.jsx';
 import Contact from './pages/public/Contact.jsx';
 import Book from './pages/public/Book.jsx';
 import Portal from './pages/public/Portal.jsx';
+import Legal from './pages/public/Legal.jsx';
+import DataRights from './pages/public/DataRights.jsx';
 import Dashboard from './pages/admin/Dashboard.jsx';
 import Patients from './pages/admin/Patients.jsx';
 import Appointments from './pages/admin/Appointments.jsx';
@@ -32,6 +34,7 @@ import Settings from './pages/admin/Settings.jsx';
 import Integrations from './pages/admin/Integrations.jsx';
 import Agency from './pages/admin/Agency.jsx';
 import WebsiteMgr from './pages/admin/WebsiteMgr.jsx';
+import Compliance from './pages/admin/Compliance.jsx';
 
 function RequireStaff({ children }) {
   const s = getSession();
@@ -51,6 +54,11 @@ export default function App() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/book" element={<Book />} />
         <Route path="/portal" element={<Portal />} />
+        <Route path="/privacy" element={<Legal />} />
+        <Route path="/terms" element={<Legal />} />
+        <Route path="/grievance" element={<Legal />} />
+        <Route path="/consent" element={<Legal />} />
+        <Route path="/data-rights" element={<DataRights />} />
       </Route>
       <Route path="/admin" element={<RequireStaff><AdminLayout /></RequireStaff>}>
         <Route index element={<Dashboard />} />
@@ -74,6 +82,7 @@ export default function App() {
         <Route path="integrations" element={<Integrations />} />
         <Route path="agency" element={<Agency />} />
         <Route path="website" element={<WebsiteMgr />} />
+        <Route path="compliance" element={<Compliance />} />
       </Route>
     </Routes>
   );

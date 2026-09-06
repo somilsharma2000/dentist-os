@@ -91,6 +91,10 @@ export default function PublicLayout() {
               <li><Link className="hover:text-primary" to="/portal">Patient Portal</Link></li>
               <li><Link className="hover:text-primary" to="/contact">Contact</Link></li>
               <li><Link className="hover:text-primary" to="/admin-login">Staff Login</Link></li>
+              <li><Link className="hover:text-primary" to="/privacy">Privacy Notice</Link></li>
+              <li><Link className="hover:text-primary" to="/terms">Terms of Use</Link></li>
+              <li><Link className="hover:text-primary" to="/grievance">Privacy & Grievance</Link></li>
+              <li><Link className="hover:text-primary" to="/data-rights">Data Rights</Link></li>
             </ul>
           </div>
           <div>

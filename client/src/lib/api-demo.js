@@ -18,8 +18,12 @@ let db;
 try {
   const raw = localStorage.getItem(LS_KEY);
   db = raw ? JSON.parse(raw) : clone(dbSeed);
+  db.legalRequests = db.legalRequests || [];
+  db.securityIncidents = db.securityIncidents || [];
 } catch (e) {
   db = clone(dbSeed);
+  db.legalRequests = [];
+  db.securityIncidents = [];
 }
 
 function persist() {
@@ -107,7 +111,7 @@ function err(status, message) {
 const TABLES = [
   'patients', 'dentists', 'appointments', 'treatmentPlans', 'invoices', 'leads', 'reviews',
   'tasks', 'inventory', 'automations', 'recall', 'socialPosts', 'tenants', 'staff',
-  'whatsappChats', 'qrCodes'
+  'whatsappChats', 'qrCodes', 'legalRequests', 'securityIncidents'
 ];
 const TENANT_TABLES = new Set(TABLES.filter((t) => t !== 'tenants' && t !== 'staff'));
 const SUPER_TABLES = new Set(['tenants', 'staff']);
@@ -583,6 +587,12 @@ function routePost(path, body) {
   if (path === '/portal/otp/verify') return portalOtpVerify(body);
   if (path === '/whatsapp/send') return sendWhatsApp(body);
   if (path === '/portal/register') return portalRegister(body);
+  if (path === '/privacy/requests') {
+    const { name, email, phone, type, details } = body || {};
+    if (!name || !email || !['access', 'correction', 'withdraw-consent', 'deletion', 'grievance'].includes(type)) throw err(400, 'Name, email and a valid request type are required.');
+    const item = { id: nextId(), created_date: new Date().toISOString(), tenantId: PUBLIC_TENANT, name: String(name).slice(0, 120), email: String(email).toLowerCase().slice(0, 160), phone: String(phone || '').slice(0, 30), type, details: String(details || '').slice(0, 2000), status: 'Open', resolution: '' };
+    db.legalRequests.push(item); persist(); return { ok: true, requestId: item.id, message: 'Your request has been recorded. The clinic will verify your identity before taking action.' };
+  }
 
   const parts = path.split('/').filter(Boolean);
   if (parts.length === 1 && TABLES.includes(parts[0])) {

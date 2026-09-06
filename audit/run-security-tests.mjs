@@ -67,6 +67,8 @@ async function main() {
     const admin = await api('POST', '/auth/login', { body: { email: 'admin@smilecraft.com', password: 'admin123' } });
     record('tenant-1 admin can log in', admin.status === 200 && !!admin.json.token, admin.status);
     const tok = admin.json?.token;
+    const adminRights = await api('GET', '/legalRequests', { token: tok });
+    record('clinic admin can view data-rights register', adminRights.status === 200 && Array.isArray(adminRights.json), adminRights.status);
 
     const agency = await api('POST', '/auth/login', { body: { email: 'agency@dentos.app', password: 'agency123' } });
     const superTok = agency.json?.token;
@@ -103,6 +105,10 @@ async function main() {
     record('GET /patients requires auth', noAuth.status === 401);
     const pubRev = await api('GET', '/reviews');
     record('GET /reviews public view ok', pubRev.status === 200 && Array.isArray(pubRev.json), Array.isArray(pubRev.json) ? pubRev.json.length + ' published' : '');
+    const rights = await api('POST', '/privacy/requests', { body: { name: 'Rights Tester', email: 'rights@example.com', type: 'access', details: 'Please provide my records.' } });
+    record('public data-rights request accepted', rights.status === 201 && !!rights.json?.requestId, rights.status);
+    const privateRights = await api('GET', '/legalRequests');
+    record('data-rights register requires staff auth', privateRights.status === 401, privateRights.status);
 
     // super view-tenant scoping
     await api('PUT', '/auth/view-tenant', { token: superTok, body: { tenantId: 2 } });

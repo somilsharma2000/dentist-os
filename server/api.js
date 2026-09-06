@@ -8,6 +8,7 @@ load(seed);
 
 const router = express.Router();
 const db = get();
+for (const table of ['legalRequests', 'securityIncidents']) db[table] = db[table] || [];
 const PUBLIC_TENANT = 1; // the clinic that owns the public website
 
 // ---- Auth: in-memory token sessions (demo-grade; swap for JWT in production hardening) ----
@@ -21,10 +22,11 @@ const LOGIN_WINDOW_MS = 60 * 1000;
 const TABLES = [
   'patients', 'dentists', 'appointments', 'treatmentPlans', 'invoices', 'leads', 'reviews',
   'tasks', 'inventory', 'automations', 'recall', 'socialPosts', 'tenants', 'staff',
-  'whatsappChats', 'qrCodes'
+  'whatsappChats', 'qrCodes', 'legalRequests', 'securityIncidents'
 ];
 const TENANT_TABLES = new Set(TABLES.filter((t) => t !== 'tenants' && t !== 'staff'));
 const SUPER_TABLES = new Set(['tenants', 'staff']);
+const COMPLIANCE_TABLES = new Set(['legalRequests', 'securityIncidents']);
 const PUBLIC_TABLES = new Set(['dentists', 'reviews']);
 
 const BOOKING_SLOTS = ['09:00', '09:45', '10:30', '11:15', '12:00', '14:00', '14:45', '15:30', '16:15', '17:00', '17:45'];
@@ -740,6 +742,23 @@ router.post('/jobs/run', async (req, res) => {
 });
 
 
+// ---- Public legal/data-rights requests ----
+router.post('/privacy/requests', (req, res) => {
+  if (publicRateLimited(req, 'privacy-request', 8)) return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+  const { name, email, phone, type, details } = req.body || {};
+  const allowed = new Set(['access', 'correction', 'withdraw-consent', 'deletion', 'grievance']);
+  if (!name || !email || !allowed.has(type)) return res.status(400).json({ error: 'Name, email and a valid request type are required.' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) return res.status(400).json({ error: 'Enter a valid email address.' });
+  const item = {
+    id: nextId(), created_date: new Date().toISOString(), tenantId: PUBLIC_TENANT,
+    name: String(name).trim().slice(0, 120), email: String(email).trim().toLowerCase().slice(0, 160),
+    phone: String(phone || '').replace(/[^0-9+ -]/g, '').slice(0, 30), type,
+    details: String(details || '').trim().slice(0, 2000), status: 'Open', assignedTo: null, resolution: '', resolvedAt: null
+  };
+  db.legalRequests.push(item); save();
+  res.status(201).json({ ok: true, requestId: item.id, message: 'Your request has been recorded. The clinic will verify your identity before taking action.' });
+});
+
 // ---- Generic CRUD (tenant-scoped) ----
 TABLES.forEach((t) => {
   router.get('/' + t, (req, res) => {
@@ -753,6 +772,9 @@ TABLES.forEach((t) => {
     if (SUPER_TABLES.has(t) && s.staff.role !== 'super') {
       return res.status(403).json({ error: 'Agency owner access only.' });
     }
+    if (COMPLIANCE_TABLES.has(t) && !['admin', 'super'].includes(s.staff.role)) {
+      return res.status(403).json({ error: 'Clinic administrator access only.' });
+    }
     if (t === 'staff') return res.json(sc(db.staff, tid(req)).map(stripSecrets));
     if (t === 'tenants') return res.json(db.tenants.map(safeTenant));
     res.json(sc(db[t], tid(req)));
@@ -763,6 +785,9 @@ TABLES.forEach((t) => {
     if (!s) return res.status(401).json({ error: 'Please sign in.' });
     if (SUPER_TABLES.has(t) && s.staff.role !== 'super') {
       return res.status(403).json({ error: 'Agency owner access only.' });
+    }
+    if (COMPLIANCE_TABLES.has(t) && !['admin', 'super'].includes(s.staff.role)) {
+      return res.status(403).json({ error: 'Clinic administrator access only.' });
     }
     if (TENANT_TABLES.has(t) && tid(req) === null) {
       return res.status(400).json({ error: 'Pick a clinic first.' });
@@ -787,6 +812,9 @@ TABLES.forEach((t) => {
     if (!s) return res.status(401).json({ error: 'Please sign in.' });
     if (SUPER_TABLES.has(t) && s.staff.role !== 'super') {
       return res.status(403).json({ error: 'Agency owner access only.' });
+    }
+    if (COMPLIANCE_TABLES.has(t) && !['admin', 'super'].includes(s.staff.role)) {
+      return res.status(403).json({ error: 'Clinic administrator access only.' });
     }
     const arr = t === 'tenants' ? db.tenants : db[t];
     const i = arr.findIndex((x) => String(x.id) === req.params.id);
@@ -814,6 +842,9 @@ TABLES.forEach((t) => {
     if (SUPER_TABLES.has(t) && s.staff.role !== 'super') {
       return res.status(403).json({ error: 'Agency owner access only.' });
     }
+    if (COMPLIANCE_TABLES.has(t) && !['admin', 'super'].includes(s.staff.role)) {
+      return res.status(403).json({ error: 'Clinic administrator access only.' });
+    }
     const arr = db[t];
     const i = arr.findIndex((x) => String(x.id) === req.params.id);
     if (i < 0) return res.status(404).json({ error: 'Not found' });
@@ -830,6 +861,23 @@ TABLES.forEach((t) => {
 // ---- Settings ----
 const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 const GST_STATE_RE = /^(0[1-9]|[1-2][0-9]|3[0-8]|97)$/;
+
+function validateLegalProfile(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return { error: 'legalProfile must be an object.' };
+  const out = {};
+  for (const key of ['privacyNoticeVersion', 'termsVersion', 'policyEffectiveDate', 'grievanceOfficerName', 'grievanceEmail', 'grievancePhone', 'privacyNoticeUrl', 'termsUrl']) {
+    if (input[key] !== undefined) out[key] = String(input[key]).trim().slice(0, 300);
+  }
+  for (const key of ['patientRecordRetentionYears', 'invoiceRetentionYears', 'messageRetentionDays', 'securityLogRetentionDays']) {
+    if (input[key] !== undefined && input[key] !== '') {
+      const value = Number(input[key]);
+      const minimum = key === 'securityLogRetentionDays' ? 180 : 1;
+      if (!Number.isInteger(value) || value < minimum || value > 36500) return { error: `${key} must be an integer between ${minimum} and 36500.` };
+      out[key] = value;
+    }
+  }
+  return { value: out };
+}
 
 function validateBillingProfile(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
@@ -872,6 +920,11 @@ router.put('/settings', (req, res) => {
     const billing = validateBillingProfile(patch.billingProfile);
     if (billing.error) return res.status(400).json({ error: billing.error });
     patch.billingProfile = billing.value;
+  }
+  if (patch.legalProfile !== undefined) {
+    const legal = validateLegalProfile(patch.legalProfile);
+    if (legal.error) return res.status(400).json({ error: legal.error });
+    patch.legalProfile = legal.value;
   }
   if (String(t) === '1') {
     db.settings = { ...db.settings, ...patch };
