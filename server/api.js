@@ -262,6 +262,66 @@ router.put('/integrations', (req, res) => {
   res.json({ ok: true, integrations: maskIntegrations(tn.integrations) });
 });
 
+// ---- WhatsApp webhook: verification, inbound messages, delivery status ----
+function whatsappTenantByConfig(value) {
+  return (db.tenants || []).find((t) => {
+    const c = t.integrations?.whatsapp?.config || {};
+    return [c.phoneNumberId, c.phoneNumber, c.businessNumber].filter(Boolean).some((v) => String(v) === String(value));
+  });
+}
+
+router.get('/webhooks/whatsapp', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+  const tenant = (db.tenants || []).find((t) => t.integrations?.whatsapp?.config?.webhookVerifyToken === token);
+  if (mode === 'subscribe' && tenant && challenge) return res.status(200).send(String(challenge));
+  return res.sendStatus(403);
+});
+
+router.post('/webhooks/whatsapp', (req, res) => {
+  const signature = req.headers['x-hub-signature-256'];
+  const raw = req.rawBody || Buffer.from(JSON.stringify(req.body || {}));
+  const entries = req.body?.entry || [];
+  const phoneId = entries[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
+  const tenant = whatsappTenantByConfig(phoneId);
+  const secret = tenant?.integrations?.whatsapp?.config?.appSecret;
+  if (!tenant || !secret || typeof signature !== 'string' || !signature.startsWith('sha256=')) return res.sendStatus(403);
+  const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(raw).digest('hex');
+  const a = Buffer.from(signature); const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return res.sendStatus(403);
+  db.whatsappMessages = db.whatsappMessages || [];
+  for (const entry of entries) for (const change of entry.changes || []) {
+    const value = change.value || {};
+    for (const status of value.statuses || []) {
+      const msg = db.whatsappMessages.find((m) => m.providerMessageId === status.id && String(m.tenantId) === String(tenant.id));
+      if (msg) { msg.status = status.status || msg.status; msg.statusAt = new Date().toISOString(); }
+    }
+    for (const incoming of value.messages || []) {
+      const from = normalizePhone(incoming.from);
+      if (!from) continue;
+      const patient = sc(db.patients, tenant.id).find((p) => p.phone === from);
+      const inboundText = incoming.text?.body || '';
+      db.whatsappMessages.push({
+        id: nextId(), tenantId: tenant.id, patientId: patient?.id || null, phone: from,
+        direction: 'in', type: incoming.type || 'text', text: inboundText,
+        providerMessageId: incoming.id || null, status: 'received', createdAt: new Date().toISOString()
+      });
+      if (/^(stop|unsubscribe|opt[- ]?out|போதும்)$/i.test(String(inboundText).trim())) {
+        db.consentLogs = db.consentLogs || [];
+        db.consentLogs.push({
+          id: nextId(), tenantId: tenant.id, patientId: patient?.id || null, phone: from,
+          scope: 'marketing', status: 'withdrawn', consentType: 'whatsapp_opt_out',
+          purpose: 'Patient requested WhatsApp marketing opt-out', source: 'whatsapp_inbound',
+          withdrawnAt: new Date().toISOString(), capturedAt: new Date().toISOString()
+        });
+      }
+    }
+  }
+  save();
+  return res.sendStatus(200);
+});
+
 // ---- WhatsApp outbound transport ----
 // Messages are only sent when the clinic has configured Meta Cloud API credentials.
 // Without credentials the API refuses the send instead of pretending delivery.

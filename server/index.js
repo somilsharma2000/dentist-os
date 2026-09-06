@@ -4,7 +4,7 @@ const fs = require('fs');
 const { router } = require('./api');
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = Buffer.from(buf); } }));
 
 app.use('/api', router);
 

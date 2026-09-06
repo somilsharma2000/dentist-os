@@ -30,7 +30,9 @@ const CONNECTORS = [
     fields: [
       { name: 'phoneNumber', label: 'WhatsApp Business Number', placeholder: '+91 98765 43210' },
       { name: 'phoneNumberId', label: 'Meta Phone Number ID', placeholder: '123456789012345' },
-      { name: 'apiKey', label: 'Meta Access Token', placeholder: 'EAAG…', type: 'password' }
+      { name: 'apiKey', label: 'Meta Access Token', placeholder: 'EAAG…', type: 'password' },
+      { name: 'appSecret', label: 'Meta App Secret', placeholder: '••••••', type: 'password' },
+      { name: 'webhookVerifyToken', label: 'Webhook Verify Token', placeholder: 'Choose a private token', type: 'password' }
     ]
   },
   {
