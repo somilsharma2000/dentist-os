@@ -49,3 +49,14 @@ Competitive benchmark: ₹1,000–3,000/clinic/month (Practo Ray, Dentospire,
 CuraVerto, Pappyjoe, KiviHealth…). Priority roadmap gaps: e-prescriptions,
 SOAP notes, perio charting, GST invoicing, real WhatsApp sending, DPDP consent
 capture + age gate, NMC record retention. See `../audit/field-research.md`.
+
+## Follow-up hardening — 6 September 2026
+
+- **DPDP booking consent:** public booking now requires an explicit, versioned
+  privacy-notice acceptance. The server and demo mode both reject missing or
+  stale consent versions.
+- **Consent audit trail:** accepted bookings create tenant-scoped consent logs
+  linked to the patient and appointment, with purpose, policy version, source,
+  and capture timestamp. No IP or unnecessary sensitive metadata is stored.
+- **Separate marketing opt-in:** WhatsApp offers/marketing are a separate,
+  unchecked-by-default opt-in and are never implied by service consent.

@@ -78,6 +78,7 @@ function normalizePhone(raw) {
 const BOOKING_SLOTS = ['09:00', '09:45', '10:30', '11:15', '12:00', '14:00', '14:45', '15:30', '16:15', '17:00', '17:45'];
 const TOOTH_STATES = new Set(['healthy', 'filled', 'crowned', 'rootcanal', 'implant', 'extracted']);
 const INACTIVE_APPT = new Set(['cancelled', 'no-show', 'no show']);
+const BOOKING_CONSENT_VERSION = '2026-09-06';
 const PROTECTED_FIELDS = ['id', 'created_date', 'created_by', 'tenantId'];
 
 function sanitizeBody(body, opts = {}) {
@@ -106,7 +107,7 @@ function err(status, message) {
 const TABLES = [
   'patients', 'dentists', 'appointments', 'treatmentPlans', 'invoices', 'leads', 'reviews',
   'tasks', 'inventory', 'automations', 'recall', 'socialPosts', 'tenants', 'staff',
-  'whatsappChats', 'qrCodes'
+  'whatsappChats', 'qrCodes', 'consentLogs'
 ];
 const TENANT_TABLES = new Set(TABLES.filter((t) => t !== 'tenants' && t !== 'staff'));
 const SUPER_TABLES = new Set(['tenants', 'staff']);
@@ -260,9 +261,12 @@ function getSlots(params) {
 }
 
 function createBooking(body) {
-  const { service, dentistId, date, time, name, phone, email, notes } = body;
+  const { service, dentistId, date, time, name, phone, email, notes, consentGiven, marketingConsentGiven, consentVersion } = body;
   if (!name || !phone || !date || !time || !service) {
     throw err(400, 'Missing required booking details.');
+  }
+  if (consentGiven !== true || consentVersion !== BOOKING_CONSENT_VERSION) {
+    throw err(400, 'Please accept the privacy notice to continue.');
   }
   if (!isIsoDate(date)) throw err(400, 'Invalid date format. Use YYYY-MM-DD.');
   if (date < todayISO()) throw err(400, 'Please pick today or a future date.');
@@ -293,6 +297,21 @@ function createBooking(body) {
     date, time, type: 'checkup', procedure: String(service).slice(0, 120), fee: 0, status: 'Scheduled'
   };
   db.appointments.push(appt);
+  db.consentLogs = db.consentLogs || [];
+  db.consentLogs.push({
+    id: nextId(), tenantId: PUBLIC_TENANT, patientId: patient.id, appointmentId: appt.id,
+    scope: 'service', consentType: 'booking_privacy_notice', purpose: 'Appointment booking and clinic communication',
+    policyVersion: BOOKING_CONSENT_VERSION, source: 'public_booking',
+    capturedAt: new Date().toISOString()
+  });
+  if (marketingConsentGiven === true) {
+    db.consentLogs.push({
+      id: nextId(), tenantId: PUBLIC_TENANT, patientId: patient.id, appointmentId: appt.id,
+      scope: 'marketing', consentType: 'whatsapp_marketing', purpose: 'Optional appointment reminders, offers and checkup nudges',
+      policyVersion: BOOKING_CONSENT_VERSION, source: 'public_booking',
+      capturedAt: new Date().toISOString()
+    });
+  }
   persist();
   return { appointment: clone(appt), patient: clone(patient), isNewPatient: isNew };
 }

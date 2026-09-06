@@ -6,6 +6,8 @@ import { Button, Card, Avatar, Input, Textarea, Badge } from '../../components/u
 import { CheckCircle2, Calendar, Clock, User, UserCheck, Stethoscope, ChevronRight, ChevronLeft } from 'lucide-react';
 import { getServiceIcon } from '../../lib/serviceIcons';
 
+const BOOKING_CONSENT_VERSION = '2026-09-06';
+
 const STEPS = [
   { id: 1, name: 'Service' },
   { id: 2, name: 'Dentist' },
@@ -34,6 +36,8 @@ export default function Book() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
+  const [consentGiven, setConsentGiven] = useState(false);
+  const [marketingConsentGiven, setMarketingConsentGiven] = useState(false);
 
   const [stepError, setStepError] = useState('');
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -129,6 +133,8 @@ export default function Book() {
         return;
       }
       setStep(6);
+    } else if (step === 6 && !consentGiven) {
+      setStepError('Please accept the privacy notice before confirming your booking.');
     }
   };
 
@@ -151,7 +157,10 @@ export default function Book() {
         name: name.trim(),
         phone: phone.trim(),
         email: email.trim() || undefined,
-        notes: notes.trim() || undefined
+        notes: notes.trim() || undefined,
+        consentGiven,
+        marketingConsentGiven,
+        consentVersion: BOOKING_CONSENT_VERSION
       });
       setBookingConfirmed(res);
     } catch (err) {
@@ -172,6 +181,8 @@ export default function Book() {
     setPhone('');
     setEmail('');
     setNotes('');
+    setConsentGiven(false);
+    setMarketingConsentGiven(false);
     setStepError('');
     setBookingConfirmed(null);
   };
@@ -607,6 +618,31 @@ export default function Book() {
                 </div>
               )}
             </div>
+            <label className="flex items-start gap-3 rounded-lg border bg-muted/20 p-4 text-left text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 accent-primary"
+                checked={consentGiven}
+                onChange={(e) => { setConsentGiven(e.target.checked); setStepError(''); }}
+              />
+              <span>
+                I agree to SmileCraft Dental Clinic collecting and using my details
+                to schedule this appointment and send service-related updates. I
+                have read the <span className="font-medium underline">privacy notice</span>.
+              </span>
+            </label>
+            <label className="flex items-start gap-3 rounded-lg border p-4 text-left text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 accent-primary"
+                checked={marketingConsentGiven}
+                onChange={(e) => setMarketingConsentGiven(e.target.checked)}
+              />
+              <span className="text-muted-foreground">
+                I would like to receive optional appointment reminders, offers and
+                checkup nudges on WhatsApp. This is optional and can be withdrawn later.
+              </span>
+            </label>
           </div>
         )}
 
