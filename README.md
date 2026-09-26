@@ -97,3 +97,8 @@ server/
   seed.js       Realistic seed data (mirrors the original app)
   db.js         JSON-file persistence
 ```
+
+## Demo deployment (GitHub Pages)
+Live demo: https://somilsharma2000.github.io/dentist-os/ (served from the `gh-pages` branch).
+Rebuild: `npm run build:demo` (VITE_DEMO=1, base=/dentist-os/), then force-push `dist/` contents to `gh-pages`.
+Last deploy: 26 Sep 2026 (main @ fc2aced) by beyond.
